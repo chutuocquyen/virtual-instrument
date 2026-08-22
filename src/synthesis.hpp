@@ -201,6 +201,20 @@ class Guitar {
             released_ = true;
         }
 
+        void reset() {
+            velocityGain_ = 0;
+            releaseGain_ = 0;
+            releaseMultipler_ = 0;
+            feedbackGain_ = 0;
+
+            idx_ = 0;
+            toDelay_ = 0;
+
+            previous_ = 0;
+            active_ = false;
+            released_ = false;
+        }
+
         bool active() const {
             return active_;
         };
