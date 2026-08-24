@@ -2,10 +2,7 @@
 #define _PROCESSOR_
 
 #include <array>
-#include <vector>
 #include "midi.hpp"
-
-constexpr uint8_t ANZAHL_NOTES = 128;
 
 struct State {
     virtual ~State() = default;
@@ -16,7 +13,13 @@ class Processor {
     public:
         virtual ~Processor() = default;
 
-        virtual std::vector<MidiEvent> process(const MidiEvent& event) = 0;
+        virtual MidiEventBuffer process(const MidiEvent &event) {
+            return MidiEventBuffer(event);
+        }
+        virtual float process(const float &sample) {
+            return sample;
+        }
+        virtual void enable(const bool &a) = 0;
         virtual void reset() = 0;
 };
 

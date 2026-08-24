@@ -261,8 +261,8 @@ class Guitar {
                 }
             }
 
-            // return (float) current * 0.55 * releaseGain_;
-            return (float) std::tanh(1.35 * current) * 0.55 * releaseGain_;
+            return (float) current * 0.55 * releaseGain_;
+            // return (float) std::tanh(1.35 * current) * 0.55 * releaseGain_;
         }
 
     private:
