@@ -1,7 +1,6 @@
 #ifndef _WAH_PROCESSOR_
 #define _WAH_PROCESSOR_
 
-#include <numbers>
 #include "processor.hpp"
 
 struct wahState : public State {
