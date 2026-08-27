@@ -6,7 +6,10 @@
 
 class Butterworth {
     public:
-        explicit Butterworth(const double &samplingRate = 44100, const float &cutoff = 10) : samplingRate_(samplingRate), cutoff_(cutoff) {
+        explicit Butterworth(const float &samplingRate = 44100) : samplingRate_(samplingRate), cutoff_(10) {
+            init();
+        }
+        explicit Butterworth(const float &samplingRate = 44100, const float &cutoff = 10) : samplingRate_(samplingRate), cutoff_(cutoff) {
             init();
         }
 
@@ -24,6 +27,10 @@ class Butterworth {
             s1_ = 0;
             s2_ = 0;
         }
+
+		void setCutoff(const float &cutoff) {
+			cutoff_ = cutoff;
+		}
 
     private:
         void init () {
@@ -45,7 +52,7 @@ class Butterworth {
             a2 = (1 - alpha) / a0;
         }
 
-        double samplingRate_;
+        float samplingRate_;
         float cutoff_;
 
         float a1, a2, b0, b1, b2;

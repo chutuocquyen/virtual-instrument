@@ -8,13 +8,13 @@
 class Instrument {
     public:
         virtual ~Instrument() = default;
-        virtual void setSamplingRate(const double &samplingRate) = 0;
+        virtual void setSamplingRate(const float &samplingRate) = 0;
         virtual void process(const MidiEvent &event) = 0;
         virtual float render() = 0;
         virtual void reset() = 0;
 
     protected:
-        double samplingRate_ = 44100;
+        float samplingRate_ = 44100;
         std::array<uint8_t, 128> active_{};
         std::size_t activeCounter_ = 0;
 };
@@ -22,11 +22,11 @@ class Instrument {
 template<typename Voice>
 class VirtualInstrument: public Instrument {
     public:
-        explicit VirtualInstrument(const double samplingRate = 44100) {
+        explicit VirtualInstrument(const float samplingRate = 44100) {
             setSamplingRate(samplingRate);
         };
 
-        void setSamplingRate(const double &samplingRate) override {
+        void setSamplingRate(const float &samplingRate) override {
             samplingRate_ = samplingRate;
             for (auto &note: notes_) {
                 note.setSamplingRate(samplingRate_);

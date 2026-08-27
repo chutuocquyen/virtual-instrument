@@ -7,36 +7,36 @@
 #include <numbers>
 #include <random>
 
-constexpr double pi = std::numbers::pi;
+constexpr float pi = std::numbers::pi_v<float>;
 
-constexpr double pickPosition = 0.12;
-constexpr double decayTime = 4.2;
+constexpr float pickPosition = 0.12;
+constexpr float decayTime = 10;
 
-double inharmonicityCoeff(uint8_t note) {
-    const double m = (double) note;
+float inharmonicityCoeff(uint8_t note) {
+    const float m = (float) note;
     return std::exp(-10.2 - 0.014 * m) + std::exp(0.1021 * m - 14.6221);
 }
 
 class Piano {
     public:
         Piano() = default;
-        Piano(double samplingRate) : samplingRate_(samplingRate) {};
+        Piano(const float &samplingRate) : samplingRate_(samplingRate) {};
 
-        void setSamplingRate(double samplingRate) {
+        void setSamplingRate(const float &samplingRate) {
             samplingRate_ = samplingRate;
             samplingTime_ = 1.0 / samplingRate;
         };
 
-        void noteOn(uint8_t note, uint8_t velocity) {
+        void noteOn(const uint8_t &note, const uint8_t &velocity) {
             note_ = note;
-            frequency_ = 440.0 * std::pow(2.0, ((double) note - 69) / 12);
+            frequency_ = 440.0 * std::pow(2.0, ((float) note - 69) / 12);
 
             lastTime_ = 0;
             releaseTime_ = 0;
 
             released_ = false;
             active_ = velocity > 0;
-            velocityGain_ = std::pow((double) velocity / 127, 2);
+            velocityGain_ = std::pow((float) velocity / 127, 2);
 
             harmonics_.generate(note_);
 
@@ -70,10 +70,10 @@ class Piano {
 
         float render() {
             if (!active_) return 0;
-            const double attack = 1.0 - std::exp(-lastTime_ / 0.004);
-            const double release = released_ ? std::exp(-releaseTime_ / 0.32) : 1;
+            const float attack = 1.0 - std::exp(-lastTime_ / 0.004);
+            const float release = released_ ? std::exp(-releaseTime_ / 0.32) : 1;
 
-            double sample = 0;
+            float sample = 0;
 
             for (auto &harmonic : harmonics_.h) {
                 sample += harmonic.amplitude * harmonic.envelopeValue * std::sin(harmonic.phase);
@@ -82,7 +82,7 @@ class Piano {
                 if (harmonic.phase > 2 * pi) harmonic.phase -= 2 * pi;
             }
 
-            const double hammer = 0.12 * std::exp(-lastTime_ / 0.018) * std::sin(2 * pi * frequency_ * 8.7 * lastTime_);
+            const float hammer = 0.12 * std::exp(-lastTime_ / 0.018) * std::sin(2 * pi * frequency_ * 8.7 * lastTime_);
 
             sample = 0.34 * velocityGain_ * attack * release * (sample + hammer);
             
@@ -96,38 +96,38 @@ class Piano {
         };
 
     private:
-        double samplingRate_ = 44100;
-        double samplingTime_ = 1.0 / samplingRate_;
+        float samplingRate_ = 44100;
+        float samplingTime_ = 1.0 / samplingRate_;
 
-        uint8_t note_ = 60;    // C4
-        double frequency_ = 440.0 * std::pow(2.0, -9.0 / 12);
+        uint8_t note_;
+        float frequency_;
 
-        double velocityGain_ = 0;
-        double lastTime_ = 0;
-        double releaseTime_ = 0;
+        float velocityGain_ = 0;
+        float lastTime_ = 0;
+        float releaseTime_ = 0;
 
         bool active_ = false;
         bool released_ = false;
 
         struct Harmonic {
             Harmonic() = default;
-            Harmonic(const size_t n, const double a, const double d) : order(n), amplitude(a), decay(d) {};
+            Harmonic(const size_t &n, const float &a, const float &d) : order(n), amplitude(a), decay(d) {};
             size_t order;
-            double amplitude;
-            double decay;
-            double ratio;
+            float amplitude;
+            float decay;
+            float ratio;
 
-            double envelopeValue;
-            double envelopeDecay;
-            double phase;
-            double phaseShift;
+            float envelopeValue;
+            float envelopeDecay;
+            float phase;
+            float phaseShift;
         };
 
         struct Harmonics {
             std::array<Harmonic, 7> h;
 
             void generate(uint8_t note) {
-                const double B = inharmonicityCoeff(note);
+                const float B = inharmonicityCoeff(note);
 
                 for (auto &harmonic: h) {
                     const uint8_t order = harmonic.order;
@@ -143,9 +143,9 @@ class Piano {
             tmp.h[1] = Harmonic{2, 0.55, 1.5};
             tmp.h[2] = Harmonic{3, 0.32, 1.2};
             tmp.h[3] = Harmonic{4, 0.20, 1.0};
-            // tmp.h[4] = Harmonic{5, 0.13, 0.7};
-            // tmp.h[5] = Harmonic{6, 0.08, 0.5};
-            // tmp.h[6] = Harmonic{7, 0.05, 0.3};
+            tmp.h[4] = Harmonic{5, 0.13, 0.7};
+            tmp.h[5] = Harmonic{6, 0.08, 0.5};
+            tmp.h[6] = Harmonic{7, 0.05, 0.3};
 
             return tmp;
         };
@@ -156,18 +156,18 @@ class Piano {
 class Guitar {
     public:
         Guitar() = default;
-        Guitar(double samplingRate) : samplingRate_(samplingRate) {};
+        Guitar(float samplingRate) : samplingRate_(samplingRate) {};
 
-        void setSamplingRate(double samplingRate) {
+        void setSamplingRate(float samplingRate) {
             samplingRate_ = samplingRate;
             samplingTime_ = 1.0 / samplingRate;
         };
         
         void noteOn(uint8_t note, uint8_t velocity) {
             note_ = note;
-            frequency_ = 440.0 * std::pow(2.0, ((double) note - 69) / 12);
+            frequency_ = 440.0 * std::pow(2.0, ((float) note - 69) / 12);
 
-            velocityGain_ = (double) velocity / 127;
+            velocityGain_ = (float) velocity / 127;
             active_ = velocity > 0;
             released_ = false;
             releaseGain_ = 1;
@@ -184,9 +184,9 @@ class Guitar {
             const size_t bufferSize = (size_t) std::ceil(toDelay_) + 2;
             delayBuffer_.assign(bufferSize, 0);
 
-            double T60 = decayTime - 0.55 * std::log2(frequency_ / 82.406889);  // Low E
+            float T60 = decayTime - 0.55 * std::log2(frequency_ / 82.406889);  // Low E
             // T60 = std::clamp(T60, 0.5, 4.2);
-            T60 = std::max(T60, 0.5);
+            T60 = std::max(T60, 0.5f);
             feedbackGain_ = std::exp(std::log(0.001) / (T60 * frequency_));
             releaseMultipler_ = std::exp(std::log(0.001) / (decayTime * samplingRate_));
 
@@ -222,11 +222,11 @@ class Guitar {
             return note_;
         };
 
-        double fromDelay() const {
+        float fromDelay() const {
             if (delayBuffer_.empty()) return 0;
 
-            double position = idx_ - toDelay_;
-            const double bufferSize = (double) delayBuffer_.size();
+            float position = idx_ - toDelay_;
+            const float bufferSize = (float) delayBuffer_.size();
             while (position < 0) {
                 position += bufferSize;
             }
@@ -236,7 +236,7 @@ class Guitar {
 
             const size_t i0 = std::floor(position);
             const size_t i1 = (i0 + 1) % delayBuffer_.size();
-            const double tmp = position - i0;
+            const float tmp = position - i0;
             
             return delayBuffer_[i0] + tmp * (delayBuffer_[i1] - delayBuffer_[i0]);
         }
@@ -244,8 +244,8 @@ class Guitar {
         float render() {
             if (!active_ || delayBuffer_.empty()) return 0;
             
-            const double current = fromDelay();
-            const double averaged = 0.5 * (current + previous_);
+            const float current = fromDelay();
+            const float averaged = 0.5 * (current + previous_);
 
             // delayBuffer_[idx_] = averaged;
             delayBuffer_[idx_] = feedbackGain_ * averaged;
@@ -269,44 +269,44 @@ class Guitar {
         void string(std::mt19937 &randomizer) {
             if (delayBuffer_.empty()) return;
             
-            std::uniform_real_distribution<double> noise(-1, 1);
+            std::uniform_real_distribution<float> noise(-1, 1);
             // At least 2 fixed ends
             const size_t stringSamples = std::max<size_t>(2, std::floor(toDelay_));
-            double mean = 0;
+            float mean = 0;
 
             for (size_t i = 0; i < delayBuffer_.size(); ++i) {
                 // y(x, 0) = hx / pL
-                const double x = (double) (i % stringSamples) / (stringSamples - 1);
-                const double h = x < pickPosition ? x / pickPosition : (1 - x) / (1 - pickPosition);
+                const float x = (float) (i % stringSamples) / (stringSamples - 1);
+                const float h = x < pickPosition ? x / pickPosition : (1 - x) / (1 - pickPosition);
                 
-                const double tmp = 0.92 * h + 0.08 * noise(randomizer);
+                const float tmp = 0.92 * h + 0.08 * noise(randomizer);
                 delayBuffer_[i] = tmp;
                 mean += tmp;
             }
 
             mean /= delayBuffer_.size();
 
-            for (double &sample: delayBuffer_) {
+            for (float &sample: delayBuffer_) {
                 sample = (sample - mean) * velocityGain_;
             }
         };
 
-        double samplingRate_ = 44100;
-        double samplingTime_ = 1.0 / samplingRate_;
+        float samplingRate_ = 44100;
+        float samplingTime_ = 1.0 / samplingRate_;
 
         uint8_t note_ = 60;    // C4
-        double frequency_ = 440.0 * std::pow(2.0, -9.0 / 12);
+        float frequency_ = 440.0 * std::pow(2.0, -9.0 / 12);
 
-        double velocityGain_;
-        double releaseGain_;
-        double releaseMultipler_;
-        double feedbackGain_;
+        float velocityGain_;
+        float releaseGain_;
+        float releaseMultipler_;
+        float feedbackGain_;
 
-        std::vector<double> delayBuffer_{};
+        std::vector<float> delayBuffer_{};
         size_t idx_ = 0;
-        double toDelay_ = 0;
+        float toDelay_ = 0;
 
-        double previous_;
+        float previous_;
         
         bool active_ = false;
         bool released_ = false;
