@@ -2,7 +2,7 @@
 #define _AMP_PROCESSOR_
 
 #include "processor.hpp"
-#include "filters/butterworth.hpp"
+#include "filters/biquad.hpp"
 
 class preampProcessor : public Processor {
     public:
@@ -68,7 +68,7 @@ class preampProcessor : public Processor {
         float blend_ = 0.85;
         float postGain_ = 0.9;
 
-        Butterworth lowpass_{samplingRate_, 10.f};
+        Biquad lowpass_{samplingRate_, 10.f};
 };
 
 class powerampProcessor : public Processor {
@@ -172,7 +172,7 @@ class powerampProcessor : public Processor {
         const float cp_ = std::log(std::cosh(kp_)) - kp_ * bp_;
         const float cn_ = std::log(std::cosh(kn_)) + kn_ * bn_;
 
-        Butterworth lowpass_;
+        Biquad lowpass_;
 };
 
 #endif

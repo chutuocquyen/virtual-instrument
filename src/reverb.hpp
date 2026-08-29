@@ -2,7 +2,7 @@
 #define _REVERB_PROCESSOR_
 
 #include "processor.hpp"
-#include "filters/butterworth.hpp"
+#include "filters/biquad.hpp"
 #include <numeric>
 
 struct Feedback {
@@ -68,7 +68,7 @@ class reverbProcessor : public Processor {
             if (delayBufferIdx_ == delayBuffer_.size()) delayBufferIdx_ = 0;
 
             d = spectralTilt.process(d);
-            return sample * (1 - mix_) + d * mix_;
+            return sample + d * wet_;
         }
 
         void enable(const bool &a) override {
@@ -149,10 +149,10 @@ class reverbProcessor : public Processor {
 
         float decay_ = 1.7;
         float damping_ = 0.35;
-        float mix_ = 0.15;
+        float wet_ = 0.15;
         float tone_ = 10.3;
 
-        Butterworth spectralTilt{samplingRate_, 474.f, tone_, FilterType::Lowshelf};
+        Biquad spectralTilt{samplingRate_, 474.f, FilterType::Lowshelf, tone_};
 };
 
 #endif

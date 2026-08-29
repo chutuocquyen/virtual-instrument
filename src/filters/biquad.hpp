@@ -1,5 +1,5 @@
-#ifndef _BUTTERWORTH_
-#define _BUTTERWORTH_
+#ifndef _BIQUAD_
+#define _BIQUAD_
 
 #include <cmath>
 #include <numbers>
@@ -7,11 +7,13 @@
 enum class FilterType {
     Lowpass,
     Lowshelf,
+    Highshelf,
+    Bell,
 };
 
-class Butterworth {
+class Biquad {
     public:
-        explicit Butterworth(const float &samplingRate = 44100, const float &cutoff = 10, const float &gain = 6, const FilterType type = FilterType::Lowpass) : samplingRate_(samplingRate), cutoff_(cutoff), gain_(gain), type_(type) {
+        explicit Biquad(const float &samplingRate = 44100, const float &cutoff = 10, const FilterType type = FilterType::Lowpass, const float &gain = 0, const float &Q = 1 / std::numbers::sqrt2_v<float>) : samplingRate_(samplingRate), cutoff_(cutoff), type_(type), gain_(gain), Q_(Q) {
             update();
         }
 
@@ -36,6 +38,7 @@ class Butterworth {
 		}
 
     private:
+        // https://www.w3.org/TR/audio-eq-cookbook/
         void update () {
             const float omega = 2 * std::numbers::pi_v<float> * cutoff_ / samplingRate_;
 
@@ -44,8 +47,7 @@ class Butterworth {
             
             // |G(omega)|**2 = 1 / (1 + omega**4) -> pi / 4
             // s**2 + sqrt(2) * s + 1 -> Q = 1 / sqrt(2)
-            const float Q = 1 / std::numbers::sqrt2_v<float>;
-            const float alpha = sin / 2 / Q;
+            const float alpha = sin / 2 / Q_;
 
             switch (type_) {
                 case FilterType::Lowpass: {
@@ -69,16 +71,42 @@ class Butterworth {
                     b2 = A * ((A + 1) - (A - 1) * cos - 2 * sqrt(A) * alpha) / a0;
                     break;
                 }
+
+                case FilterType::Highshelf: {
+                    const float A = std::pow(10, gain_ / 40);
+                    
+                    a0 = (A + 1) - (A - 1) * cos + 2 * sqrt(A) * alpha;
+                    a1 = 2 * ((A - 1) - (A + 1) * cos) / a0;
+                    a2 = ((A + 1) - (A - 1) * cos - 2 * sqrt(A) * alpha) / a0;
+                    b0 = A * ((A + 1) + (A - 1) * cos + 2 * sqrt(A) * alpha) / a0;
+                    b1 = -2 * A * ((A - 1) + (A + 1) * cos) / a0;
+                    b2 = A * ((A + 1) + (A - 1) * cos - 2 * sqrt(A) * alpha) / a0;
+                    break;
+                }
+
+                case FilterType::Bell: {
+                    const float A = std::pow(10, gain_ / 40);
+
+                    a0 = 1 + alpha / A;
+                    a1 = -2 * cos / a0;
+                    a2 = (1 - alpha / A) / a0;
+                    b0 = (1 + alpha * A) / a0;
+                    b1 = a1;
+                    b2 = (1 - alpha * A) / a0;
+                    break;
+                }
             }
         }
 
         float samplingRate_;
         float cutoff_;
 
+        float Q_;
+        float gain_;
+
         float a0, a1, a2, b0, b1, b2;
         float s1_ = 0, s2_ = 0;
 
-        float gain_;
 
         FilterType type_;
 };
