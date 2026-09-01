@@ -7,6 +7,7 @@
 
 class Instrument {
     public:
+        explicit Instrument(const float &samplingRate = 44100.f) : samplingRate_(samplingRate) {}
         virtual ~Instrument() = default;
         virtual void setSamplingRate(const float &samplingRate) = 0;
         virtual void process(const MidiEvent &event) = 0;
@@ -15,16 +16,16 @@ class Instrument {
 
     protected:
         float samplingRate_ = 44100;
-        std::array<uint8_t, 128> active_{};
+        std::array<uint8_t, 128> active_{false};
         std::size_t activeCounter_ = 0;
 };
 
 template<typename Voice>
 class VirtualInstrument: public Instrument {
     public:
-        explicit VirtualInstrument(const float samplingRate = 44100) {
-            setSamplingRate(samplingRate);
-        };
+        explicit VirtualInstrument(const float &samplingRate = 44100.f) : notes_(init(samplingRate, std::make_index_sequence<128>())) {
+            samplingRate_ = samplingRate;
+        }
 
         void setSamplingRate(const float &samplingRate) override {
             samplingRate_ = samplingRate;
@@ -86,7 +87,11 @@ class VirtualInstrument: public Instrument {
         };
 
     private:
-        std::array<Voice, 128> notes_{};
+        template<size_t... I>
+        static std::array<Voice, 128> init(const float &samplingRate, std::index_sequence<I...>) {
+            return { Voice(samplingRate, (uint8_t) I)... };
+        }
+        std::array<Voice, 128> notes_;
 };
 
 using VirtualPiano = VirtualInstrument<Piano>;

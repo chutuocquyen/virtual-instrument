@@ -2,6 +2,7 @@
 #define _NOTE_SYNTHESIS_
 
 #include <array>
+#include <cassert>
 #include <cmath>
 #include <cstdint>
 #include <numbers>
@@ -20,7 +21,9 @@ float inharmonicityCoeff(uint8_t note) {
 class Piano {
     public:
         Piano() = default;
-        Piano(const float &samplingRate) : samplingRate_(samplingRate) {};
+        Piano(const float &samplingRate) : samplingRate_(samplingRate) {}
+        Piano(const float &samplingRate, const uint8_t &note) : samplingRate_(samplingRate), note_(note), frequency_(440.f * pow(2.f, (float) (note - 69) / 12)) {}
+
 
         void setSamplingRate(const float &samplingRate) {
             samplingRate_ = samplingRate;
@@ -28,8 +31,7 @@ class Piano {
         };
 
         void noteOn(const uint8_t &note, const uint8_t &velocity) {
-            note_ = note;
-            frequency_ = 440.0 * std::pow(2.0, ((float) note - 69) / 12);
+            assert(note == note_);
 
             lastTime_ = 0;
             releaseTime_ = 0;
@@ -92,7 +94,7 @@ class Piano {
                 if (release < 0.001) active_ = false;
             }
 
-            return (float) sample;
+            return sample;
         };
 
     private:
@@ -156,104 +158,83 @@ class Piano {
 class Guitar {
     public:
         Guitar() = default;
-        Guitar(float samplingRate) : samplingRate_(samplingRate) {};
+        Guitar(const float &samplingRate) : samplingRate_(samplingRate) {
+            samplingDuration_ = 1.f / samplingRate_;
+        }
+        Guitar(const float &samplingRate, const uint8_t &note) : samplingRate_(samplingRate), note_(note), frequency_(440.f * pow(2.f, (float) (note - 69) / 12)) {
+            samplingDuration_ = 1.f / samplingRate_;
+        }
 
-        void setSamplingRate(float samplingRate) {
+        void setSamplingRate(const float &samplingRate) {
             samplingRate_ = samplingRate;
-            samplingTime_ = 1.0 / samplingRate;
-        };
-        
-        void noteOn(uint8_t note, uint8_t velocity) {
-            note_ = note;
-            frequency_ = 440.0 * std::pow(2.0, ((float) note - 69) / 12);
-
-            velocityGain_ = (float) velocity / 127;
-            active_ = velocity > 0;
-            released_ = false;
-            releaseGain_ = 1;
-            
-            previous_ = 0;
-            idx_ = 0;
-
-            if (!active_) {
-                delayBuffer_.clear();
-                return;
-            }
+            samplingDuration_ =  1.f / samplingRate_;
 
             toDelay_ = samplingRate_ / frequency_;
-            const size_t bufferSize = (size_t) std::ceil(toDelay_) + 2;
-            delayBuffer_.assign(bufferSize, 0);
+            delayBuffer_.assign((size_t) std::ceil(toDelay_), 0);
+            delayBufferIdx_ = 0;
 
             float T60 = decayTime - 0.55 * std::log2(frequency_ / 82.406889);  // Low E
-            // T60 = std::clamp(T60, 0.5, 4.2);
             T60 = std::max(T60, 0.5f);
             feedbackGain_ = std::exp(std::log(0.001) / (T60 * frequency_));
-            releaseMultipler_ = std::exp(std::log(0.001) / (decayTime * samplingRate_));
+            releaseMultiplier_ = std::exp(std::log(0.001) / decayTime / samplingRate_);
+        }
 
-            ++noteCounter_;
+        void noteOn(const uint8_t &note, const uint8_t &velocity) {
+            if (!velocity) return;
+            assert(note == note_);
 
-            // std::seed_seq seed;
+            active_ = true;
+
+            velocityGain_ = (float) velocity / 127;
+            released_ = false;
+            releaseGain_ = 1.f;
+
             std::mt19937 randomizer;
             string(randomizer);
         }
+
         void noteOff() {
-            if (!active_ || released_) return;
+            if (released_) return;
             released_ = true;
         }
 
         void reset() {
-            velocityGain_ = 0;
-            releaseGain_ = 0;
-            releaseMultipler_ = 0;
-            feedbackGain_ = 0;
-
-            idx_ = 0;
-            toDelay_ = 0;
-
-            previous_ = 0;
             active_ = false;
+            init_ = false;
             released_ = false;
         }
 
-        bool active() const {
+        bool active() {
             return active_;
-        };
-        uint8_t note() const {
-            return note_;
-        };
+        }
 
-        float fromDelay() const {
+        float fromDelay() {
             if (delayBuffer_.empty()) return 0;
 
-            float position = idx_ - toDelay_;
-            const float bufferSize = (float) delayBuffer_.size();
-            while (position < 0) {
-                position += bufferSize;
-            }
-            while (position >= bufferSize) {
-                position -= bufferSize;
-            }
+            float position = delayBufferIdx_ - toDelay_;
+            const float bufferSize = delayBuffer_.size();
+            while (position < 0) position += bufferSize;
 
-            const size_t i0 = std::floor(position);
-            const size_t i1 = (i0 + 1) % delayBuffer_.size();
-            const float tmp = position - i0;
+            const size_t i1 = std::floor(position);
+            const size_t i2 = (i1 + 1) % delayBuffer_.size();
+            const size_t i0 = (i1 + delayBuffer_.size() - 1) % delayBuffer_.size();
+            const float tmp = position - i1;
             
-            return delayBuffer_[i0] + tmp * (delayBuffer_[i1] - delayBuffer_[i0]);
+            const float y1 = delayBuffer_[i1] + tmp * (delayBuffer_[i2] - delayBuffer_[i1]);
+            const float y0 = delayBuffer_[i0] + tmp * (delayBuffer_[i1] - delayBuffer_[i0]);
+
+            const float Ha = (y0 + y1) / 2;
+
+            return Ha;
         }
 
         float render() {
-            if (!active_ || delayBuffer_.empty()) return 0;
-            
-            const float current = fromDelay();
-            const float averaged = 0.5 * (current + previous_);
-
-            // delayBuffer_[idx_] = averaged;
-            delayBuffer_[idx_] = feedbackGain_ * averaged;
-            previous_ = current;
-            idx_ = (idx_ + 1) % delayBuffer_.size();
+            const float feedback = fromDelay();
+            delayBuffer_[delayBufferIdx_] = feedbackGain_ * feedback;
+            delayBufferIdx_ = (delayBufferIdx_ + 1) % delayBuffer_.size();
 
             if (released_) {
-                releaseGain_ *= releaseMultipler_;
+                releaseGain_ *= releaseMultiplier_;
 
                 if (releaseGain_ < 0.01) {
                     active_ = false;
@@ -261,56 +242,75 @@ class Guitar {
                 }
             }
 
-            return (float) current * 0.55 * releaseGain_;
-            // return (float) std::tanh(1.35 * current) * 0.55 * releaseGain_;
+            return feedback * releaseGain_;
         }
 
     private:
+        struct Allpass {
+            // H(z) = (a + z**(-1)) / (1 + a * z**(-1))
+            // a = (1 - d) / (d + 1)
+            // y[n] = a * x[n] + x[n - 1] - a * y[n - 1]
+            float a;
+            float prevX = 0, prevY = 0;
+
+            float process(const float &X) {
+                const float Y = a * X + prevX - a * prevY;
+                prevX = X;
+                prevY = Y;
+                return Y;
+            }
+
+            void reset() {
+                prevX = 0;
+                prevY = 0;
+            }
+        };
+
         void string(std::mt19937 &randomizer) {
             if (delayBuffer_.empty()) return;
-            
+
             std::uniform_real_distribution<float> noise(-1, 1);
             // At least 2 fixed ends
-            const size_t stringSamples = std::max<size_t>(2, std::floor(toDelay_));
+            const size_t numStringSamples = std::max<size_t>(2, std::floor(toDelay_));
             float mean = 0;
 
             for (size_t i = 0; i < delayBuffer_.size(); ++i) {
                 // y(x, 0) = hx / pL
-                const float x = (float) (i % stringSamples) / (stringSamples - 1);
+                const float x = (float) (i % numStringSamples) / (numStringSamples - 1);
                 const float h = x < pickPosition ? x / pickPosition : (1 - x) / (1 - pickPosition);
-                
+
                 const float tmp = 0.92 * h + 0.08 * noise(randomizer);
                 delayBuffer_[i] = tmp;
                 mean += tmp;
             }
 
             mean /= delayBuffer_.size();
-
             for (float &sample: delayBuffer_) {
                 sample = (sample - mean) * velocityGain_;
             }
-        };
+        }
 
-        float samplingRate_ = 44100;
-        float samplingTime_ = 1.0 / samplingRate_;
+        bool active_;
+        bool init_ = false;
 
-        uint8_t note_ = 60;    // C4
-        float frequency_ = 440.0 * std::pow(2.0, -9.0 / 12);
+        uint8_t note_;
+        float frequency_;
 
-        float velocityGain_;
-        float releaseGain_;
-        float releaseMultipler_;
-        float feedbackGain_;
+        float samplingRate_;
+        float samplingDuration_;
 
         std::vector<float> delayBuffer_{};
-        size_t idx_ = 0;
-        float toDelay_ = 0;
+        size_t delayBufferIdx_;
+        float toDelay_;
 
-        float previous_;
-        
-        bool active_ = false;
-        bool released_ = false;
-        uint32_t noteCounter_ = 0;
+        float velocityGain_;
+        float feedbackGain_;    // Natural envelope decay
+
+        bool released_;
+        float releaseGain_;     // Release envelope decay
+        float releaseMultiplier_;
+
+        Allpass tuningAllpass;
 };
 
 #endif
