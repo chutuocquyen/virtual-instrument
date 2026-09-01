@@ -16,7 +16,8 @@ class Instrument {
 
     protected:
         float samplingRate_ = 44100;
-        std::array<uint8_t, 128> active_{false};
+        std::array<uint8_t, 128> active_{};
+		std::array<bool, 128> indices_{};
         std::size_t activeCounter_ = 0;
 };
 
@@ -37,12 +38,13 @@ class VirtualInstrument: public Instrument {
         void process(const MidiEvent &event) override {
             switch (event.type) {
                 case MidiEventType::NoteOn:
-                    if (event.data1 < notes_.size()) {
+                    if (event.data1 < 128) {
                         if (event.data2 == 0) {
                             notes_[event.data1].noteOff();
                         } else {
-                            if (!notes_[event.data1].active()) {
+                            if (!indices_[event.data1]) {
                                 active_[activeCounter_++] = event.data1;
+								indices_[event.data1] = true;
                             }
                             notes_[event.data1].noteOn(event.data1, event.data2);
                         }
@@ -50,7 +52,7 @@ class VirtualInstrument: public Instrument {
                     break;
 
                 case MidiEventType::NoteOff:
-                    if (event.data1 < notes_.size()) {
+                    if (event.data1 < 128) {
                         notes_[event.data1].noteOff();
                     }
                     break;
@@ -68,6 +70,7 @@ class VirtualInstrument: public Instrument {
                 const uint8_t note = active_[i];
 
                 if (!notes_[note].active()) {
+					indices_[note] = false;
                     --activeCounter_;
                     active_[i] = active_[activeCounter_];
                 } else {
@@ -83,6 +86,7 @@ class VirtualInstrument: public Instrument {
             for (size_t i = 0; i < activeCounter_; ++i) {
                 notes_[active_[i]].reset();
             }
+			indices_.fill(false);
             activeCounter_ = 0;
         };
 

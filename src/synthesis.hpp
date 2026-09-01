@@ -2,7 +2,6 @@
 #define _NOTE_SYNTHESIS_
 
 #include <array>
-#include <cassert>
 #include <cmath>
 #include <cstdint>
 #include <numbers>
@@ -10,8 +9,8 @@
 
 constexpr float pi = std::numbers::pi_v<float>;
 
-constexpr float pickPosition = 0.12;
-constexpr float decayTime = 10;
+constexpr float pickPosition = 0.12f;
+constexpr float decayTime = 10.f;
 
 float inharmonicityCoeff(uint8_t note) {
     const float m = (float) note;
@@ -21,17 +20,17 @@ float inharmonicityCoeff(uint8_t note) {
 class Piano {
     public:
         Piano() = default;
-        Piano(const float &samplingRate) : samplingRate_(samplingRate) {}
-        Piano(const float &samplingRate, const uint8_t &note) : samplingRate_(samplingRate), note_(note), frequency_(440.f * pow(2.f, (float) (note - 69) / 12)) {}
+        Piano(const float &samplingRate) : samplingRate_(samplingRate), samplingDuration_(1.f / samplingRate) {}
+        Piano(const float &samplingRate, const uint8_t &note) : samplingRate_(samplingRate), samplingDuration_(1.f / samplingRate), note_(note), frequency_(440.f * pow(2.f, (float) (note - 69) / 12)) {}
 
 
         void setSamplingRate(const float &samplingRate) {
             samplingRate_ = samplingRate;
-            samplingTime_ = 1.0 / samplingRate;
+            samplingDuration_ = 1.0 / samplingRate;
         };
 
         void noteOn(const uint8_t &note, const uint8_t &velocity) {
-            assert(note == note_);
+			if (note != note_) return;
 
             lastTime_ = 0;
             releaseTime_ = 0;
@@ -44,9 +43,9 @@ class Piano {
 
             for (auto &harmonic: harmonics_.h) {
                 harmonic.envelopeValue = 1.0;
-                harmonic.envelopeDecay = std::exp(-samplingTime_ / harmonic.decay);
+                harmonic.envelopeDecay = std::exp(-samplingDuration_ / harmonic.decay);
                 harmonic.phase = 0;
-                harmonic.phaseShift = 2 * pi * frequency_ * harmonic.ratio * samplingTime_;
+                harmonic.phaseShift = 2 * pi * frequency_ * harmonic.ratio * samplingDuration_;
             }
         };
         void noteOff() {
@@ -88,10 +87,10 @@ class Piano {
 
             sample = 0.34 * velocityGain_ * attack * release * (sample + hammer);
             
-            lastTime_ += samplingTime_;
+            lastTime_ += samplingDuration_;
             if (released_) {
-                releaseTime_ += samplingTime_;
-                if (release < 0.001) active_ = false;
+                releaseTime_ += samplingDuration_;
+                if (release < 0.01) active_ = false;
             }
 
             return sample;
@@ -99,7 +98,7 @@ class Piano {
 
     private:
         float samplingRate_ = 44100;
-        float samplingTime_ = 1.0 / samplingRate_;
+        float samplingDuration_ = 1.0 / samplingRate_;
 
         uint8_t note_;
         float frequency_;
@@ -167,11 +166,23 @@ class Guitar {
 
         void setSamplingRate(const float &samplingRate) {
             samplingRate_ = samplingRate;
-            samplingDuration_ =  1.f / samplingRate_;
+            samplingDuration_ = 1.f / samplingRate_;
 
-            toDelay_ = samplingRate_ / frequency_;
-            delayBuffer_.assign((size_t) std::ceil(toDelay_), 0);
+            const float delay = samplingRate_ / frequency_ - .5f;
+            toDelay_ = (size_t) (std::floor(delay));
+
+            float d = delay - toDelay_;
+            if (d < .2f) {
+                --toDelay_;
+                d += 1.f;
+            }
+
+            delayBuffer_.assign(toDelay_, 0.f);
             delayBufferIdx_ = 0;
+
+            tuningAllpass.a = (1.f - d) / (1.f + d);
+            tuningAllpass.reset();
+            prevY_ = 0.f;
 
             float T60 = decayTime - 0.55 * std::log2(frequency_ / 82.406889);  // Low E
             T60 = std::max(T60, 0.5f);
@@ -180,8 +191,7 @@ class Guitar {
         }
 
         void noteOn(const uint8_t &note, const uint8_t &velocity) {
-            if (!velocity) return;
-            assert(note == note_);
+            if (!velocity || (note != note_)) return;
 
             active_ = true;
 
@@ -189,8 +199,10 @@ class Guitar {
             released_ = false;
             releaseGain_ = 1.f;
 
-            std::mt19937 randomizer;
             string(randomizer);
+
+            tuningAllpass.reset();
+            prevY_ = delayBuffer_.empty() ? 0.f : delayBuffer_[(delayBufferIdx_ + delayBuffer_.size() - 1) % delayBuffer_.size()];
         }
 
         void noteOff() {
@@ -202,6 +214,9 @@ class Guitar {
             active_ = false;
             init_ = false;
             released_ = false;
+
+            tuningAllpass.reset();
+            prevY_ = 0.f;
         }
 
         bool active() {
@@ -209,23 +224,14 @@ class Guitar {
         }
 
         float fromDelay() {
-            if (delayBuffer_.empty()) return 0;
+            if (delayBuffer_.empty()) return 0.f;
 
-            float position = delayBufferIdx_ - toDelay_;
-            const float bufferSize = delayBuffer_.size();
-            while (position < 0) position += bufferSize;
+            const float Y = delayBuffer_[delayBufferIdx_];
+            const float Ha = (Y + prevY_) * .5f;
+            prevY_ = Y;
 
-            const size_t i1 = std::floor(position);
-            const size_t i2 = (i1 + 1) % delayBuffer_.size();
-            const size_t i0 = (i1 + delayBuffer_.size() - 1) % delayBuffer_.size();
-            const float tmp = position - i1;
-            
-            const float y1 = delayBuffer_[i1] + tmp * (delayBuffer_[i2] - delayBuffer_[i1]);
-            const float y0 = delayBuffer_[i0] + tmp * (delayBuffer_[i1] - delayBuffer_[i0]);
-
-            const float Ha = (y0 + y1) / 2;
-
-            return Ha;
+            const float Hg = tuningAllpass.process(Ha);
+            return Hg;
         }
 
         float render() {
@@ -235,11 +241,7 @@ class Guitar {
 
             if (released_) {
                 releaseGain_ *= releaseMultiplier_;
-
-                if (releaseGain_ < 0.01) {
-                    active_ = false;
-                    return 0;
-                }
+                if (releaseGain_ < 0.01) active_ = false;
             }
 
             return feedback * releaseGain_;
@@ -290,7 +292,7 @@ class Guitar {
             }
         }
 
-        bool active_;
+        bool active_ = false;
         bool init_ = false;
 
         uint8_t note_;
@@ -299,9 +301,12 @@ class Guitar {
         float samplingRate_;
         float samplingDuration_;
 
+		std::mt19937 randomizer{};
+
         std::vector<float> delayBuffer_{};
-        size_t delayBufferIdx_;
-        float toDelay_;
+        size_t delayBufferIdx_ = 0;
+        size_t toDelay_;
+        float prevY_ = 0;
 
         float velocityGain_;
         float feedbackGain_;    // Natural envelope decay
