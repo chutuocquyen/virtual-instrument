@@ -1,5 +1,5 @@
-#ifndef _WAH_PROCESSOR_
-#define _WAH_PROCESSOR_
+#ifndef WAH_PROCESSOR
+#define WAH_PROCESSOR
 
 #include "processor.hpp"
 

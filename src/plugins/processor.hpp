@@ -1,5 +1,5 @@
-#ifndef _PROCESSOR_
-#define _PROCESSOR_
+#ifndef PROCESSOR
+#define PROCESSOR
 
 #include <array>
 #include "midi.hpp"

@@ -1,12 +1,12 @@
-#ifndef _SUSTAIN_PROCESSOR_
-#define _SUSTAIN_PROCESSOR_
+#ifndef SUSTAIN_PROCESSOR
+#define SUSTAIN_PROCESSOR
 
 #include "processor.hpp"
 
 struct sustainState : public State {
 	bool pedalDown = false;
-	std::array<bool, ANZAHL_NOTES> keysDown{false};
-	std::array<bool, ANZAHL_NOTES> sustainedNotes{false};
+	std::array<bool, NUM_NOTES> keysDown{false};
+	std::array<bool, NUM_NOTES> sustainedNotes{false};
 
 	void reset() override {
 		pedalDown = false;

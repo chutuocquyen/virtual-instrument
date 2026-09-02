@@ -1,12 +1,12 @@
-#ifndef _MIDI_
-#define _MIDI_
+#ifndef MIDI
+#define MIDI
 
 #include <array>
 #include <cstddef>
 #include <cstdint>
 
-constexpr size_t ANZAHL_NOTES = 128;
-constexpr size_t MAX_EVENTS = ANZAHL_NOTES + 1;
+constexpr size_t NUM_NOTES = 128;
+constexpr size_t MAX_EVENTS = NUM_NOTES + 1;
 
 enum class MidiEventType : uint8_t {
     NoteOn,

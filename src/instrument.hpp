@@ -1,5 +1,5 @@
-#ifndef _INSTRUMENT_
-#define _INSTRUMENT_
+#ifndef INSTRUMENT
+#define INSTRUMENT
 
 #include <array>
 #include "midi.hpp"

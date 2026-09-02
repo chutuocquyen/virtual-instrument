@@ -1,5 +1,5 @@
-#ifndef _AMP_PROCESSOR_
-#define _AMP_PROCESSOR_
+#ifndef AMP_PROCESSOR
+#define AMP_PROCESSOR
 
 #include "processor.hpp"
 #include "filters/biquad.hpp"
@@ -46,8 +46,8 @@ class preampProcessor : public Processor {
 
     private:
         float applyMapping(const float &sample) {
-            float output = polynomialCoeffs[ANZAHL_COEFFS];
-            for (size_t i = ANZAHL_COEFFS; i > 0; --i) {
+            float output = polynomialCoeffs[NUM_COEFFS];
+            for (size_t i = NUM_COEFFS; i > 0; --i) {
                 output = output * sample + polynomialCoeffs[i - 1];
             }
             return output;
@@ -57,8 +57,8 @@ class preampProcessor : public Processor {
 
         float samplingRate_ = 44100;
 
-        static constexpr size_t ANZAHL_COEFFS = 5;
-        static constexpr std::array<float, ANZAHL_COEFFS + 1> polynomialCoeffs = {
+        static constexpr size_t NUM_COEFFS = 5;
+        static constexpr std::array<float, NUM_COEFFS + 1> polynomialCoeffs = {
             0.f, 1.f, .12f, -.25f, -.04f, .16f
         };
 

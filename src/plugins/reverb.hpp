@@ -1,5 +1,5 @@
-#ifndef _REVERB_PROCESSOR_
-#define _REVERB_PROCESSOR_
+#ifndef REVERB_PROCESSOR
+#define REVERB_PROCESSOR
 
 #include "processor.hpp"
 #include "filters/biquad.hpp"

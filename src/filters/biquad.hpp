@@ -1,5 +1,5 @@
-#ifndef _BIQUAD_
-#define _BIQUAD_
+#ifndef BIQUAD
+#define BIQUAD
 
 #include <cmath>
 #include <numbers>

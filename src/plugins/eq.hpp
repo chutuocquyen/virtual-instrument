@@ -1,5 +1,5 @@
-#ifndef _EQUALIZER_
-#define _EQUALIZER_
+#ifndef EQUALIZER
+#define EQUALIZER
 
 #include "processor.hpp"
 #include "filters/biquad.hpp"
