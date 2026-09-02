@@ -78,7 +78,7 @@ class reverbProcessor : public Processor {
 
         void reset() override {
             for (size_t i = 0; i < TAP_DELAY_SIZE; ++i) {
-                tapDelayIdx_[i] = (size_t) (tapDelayBuffer_.size() - TAP_DELAY[i] * samplingRate_) % tapDelayBuffer_.size();
+                tapDelayIdx_[i] = (tapDelayBuffer_.size() - (size_t) (TAP_DELAY[i] * samplingRate_)) % tapDelayBuffer_.size();
             }
             std::fill(tapDelayBuffer_.begin(), tapDelayBuffer_.end(), 0);
             tapDelayBufferIdx_ = 0;
@@ -94,10 +94,10 @@ class reverbProcessor : public Processor {
     private:
         static constexpr int TAP_DELAY_SIZE = 6;
         static constexpr int NUM_COMB_FILTERS = 6;
-        static constexpr std::array<float, TAP_DELAY_SIZE> TAP_DELAY = {0.0199, 0.0354, 0.0389, 0.0414, 0.0699, 0.0796};
-        static constexpr std::array<float, TAP_DELAY_SIZE> TAP_GAIN = {0.841, 0.504, 0.491, 0.379, 0.380, 0.346};
+        static constexpr std::array<float, TAP_DELAY_SIZE> TAP_DELAY = {.0199f, .0354f, .0389f, .0414f, .0699f, .0796f};
+        static constexpr std::array<float, TAP_DELAY_SIZE> TAP_GAIN = {.841f, .504f, .491f, .379f, .380f, .346f};
 
-        static constexpr std::array<float, NUM_COMB_FILTERS> COMB_FILTER_DELAY = {0.05, 0.056, 0.061, 0.068, 0.072, 0.078};
+        static constexpr std::array<float, NUM_COMB_FILTERS> COMB_FILTER_DELAY = {.05f, .056f, .061f, .068f, .072f, .078f};
 
         void update() {
             // Tap delay
@@ -140,17 +140,17 @@ class reverbProcessor : public Processor {
         std::array<float, NUM_COMB_FILTERS> feedbackGains_{0};
 
         Feedback allpass_;
-        const float allpassGain_ = 0.7;
-        size_t allpassDelay_ = (size_t) (0.006 * samplingRate_);
+        const float allpassGain_ = .7f;
+        size_t allpassDelay_ = (size_t) (.006f * samplingRate_);
 
         std::vector<float> delayBuffer_{0};
         size_t delayBufferIdx_ = 0;
-        float delay_ = 0.03;
+        float delay_ = .03f;
 
-        float decay_ = 1.7;
-        float damping_ = 0.35;
-        float wet_ = 0.15;
-        float tone_ = 10.3;
+        float decay_ = 1.7f;
+        float damping_ = .35f;
+        float wet_ = .15f;
+        float tone_ = 10.3f;
 
         Biquad spectralTilt{samplingRate_, 474.f, FilterType::Lowshelf, tone_};
 };

@@ -59,14 +59,14 @@ class preampProcessor : public Processor {
 
         static constexpr size_t ANZAHL_COEFFS = 5;
         static constexpr std::array<float, ANZAHL_COEFFS + 1> polynomialCoeffs = {
-            0, 1.0, 0.12, -0.25, -0.04, 0.16
+            0.f, 1.f, .12f, -.25f, -.04f, .16f
         };
 
-        float preGain_ = 2;
-        float bias_ = 0.2;
-        float mappingRange_ = 4;
-        float blend_ = 0.85;
-        float postGain_ = 0.9;
+        float preGain_ = 2.f;
+        float bias_ = .2f;
+        float mappingRange_ = 4.f;
+        float blend_ = .85f;
+        float postGain_ = .9f;
 
         Biquad lowpass_{samplingRate_, 10.f};
 };
@@ -148,21 +148,21 @@ class powerampProcessor : public Processor {
 
         bool enabled_ = false;
 
-        float samplingRate_ = 44100;
+        float samplingRate_ = 44100.f;
 
-        float previousBiased_ = 0;
-        float previousAntiDerivative_ = 0;
+        float previousBiased_ = 0.f;
+        float previousAntiDerivative_ = 0.f;
 
-        float preGain_ = 2;
-        float bias_ = 0.2;
-        float mappingRange_ = 4;
-        float blend_ = 0.85;
-        float postGain_ = 0.9;
+        float preGain_ = 2.f;
+        float bias_ = .2f;
+        float mappingRange_ = 4.f;
+        float blend_ = .85f;
+        float postGain_ = .9f;
 
-        float kp_ = 0.1, kn_ = 0.1;
-        float Gp_ = 20, Gn_ = 10;
-        float gp_ = std::pow(10.f, Gp_ / 20);
-        float gn_ = std::pow(10.f, Gn_ / 20);
+        float kp_ = .1f, kn_ = .1f;
+        float Gp_ = 20.f, Gn_ = 10.f;
+        float gp_ = std::pow(10.f, Gp_ / 20.f);
+        float gn_ = std::pow(10.f, Gn_ / 20.f);
 
         const float ap_ = (1 - std::tanh(kp_) * std::tanh(kp_)) / gp_;
         const float bp_ = std::tanh(kp_);

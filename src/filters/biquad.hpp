@@ -61,7 +61,7 @@ class Biquad {
                 }
                 
                 case FilterType::Lowshelf: {
-                    const float A = std::pow(10, gain_ / 40);
+                    const float A = std::pow(10.f, gain_ / 40.f);
                     
                     a0 = (A + 1) + (A - 1) * cos + 2 * sqrt(A) * alpha;
                     a1 = -2 * ((A - 1) + (A + 1) * cos) / a0;
@@ -73,7 +73,7 @@ class Biquad {
                 }
 
                 case FilterType::Highshelf: {
-                    const float A = std::pow(10, gain_ / 40);
+                    const float A = std::pow(10.f, gain_ / 40.f);
                     
                     a0 = (A + 1) - (A - 1) * cos + 2 * sqrt(A) * alpha;
                     a1 = 2 * ((A - 1) - (A + 1) * cos) / a0;
@@ -85,7 +85,7 @@ class Biquad {
                 }
 
                 case FilterType::Bell: {
-                    const float A = std::pow(10, gain_ / 40);
+                    const float A = std::pow(10.f, gain_ / 40.f);
 
                     a0 = 1 + alpha / A;
                     a1 = -2 * cos / a0;

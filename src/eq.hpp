@@ -32,13 +32,13 @@ class Equalizer : public Processor {
     private:
         bool enabled_ = false;
 
-        float samplingRate_ = 44100;
+        float samplingRate_ = 44100.f;
 
-        float lowQ_ = 0.70710687f, midQ_ = 1, highQ_ = 0.70710687f;
-        float lowGain_ = 10, midGain_ = 2, highGain_ = -3;
-        float lowCutoff_ = 200, midCutoff_ = 500, highCutoff_ = 1200;
+        float lowQ_ = .70710687f, midQ_ = 1.f, highQ_ = .70710687f;
+        float lowGain_ = 10.f, midGain_ = 2.f, highGain_ = -3.f;
+        float lowCutoff_ = 200.f, midCutoff_ = 500.f, highCutoff_ = 1200.f;
 
-        float level_ = 1.2;
+        float level_ = 1.2f;
 
         Biquad lowEQ_, midEQ_, highEQ_;
 };

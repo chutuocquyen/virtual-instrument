@@ -55,7 +55,7 @@ class MidiEventBuffer {
         }
 
     private:
-        std::array<MidiEvent, MAX_EVENTS> events_{};
+        std::array<MidiEvent, MAX_EVENTS> events_;
         size_t size_ = 0;
 };
 
