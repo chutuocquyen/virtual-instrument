@@ -1,16 +1,14 @@
-#ifndef _NOTE_SYNTHESIS_
-#define _NOTE_SYNTHESIS_
+#ifndef NOTE_SYNTHESIS
+#define NOTE_SYNTHESIS
 
 #include <array>
 #include <cmath>
 #include <cstdint>
 #include <numbers>
 #include <random>
+#include "filters/thiran.hpp"
 
 constexpr float pi = std::numbers::pi_v<float>;
-
-constexpr float pickPosition = .12f;
-constexpr float decayTime = 10.f;
 
 inline float inharmonicityCoeff(uint8_t note) {
     const float m = (float) note;
@@ -20,8 +18,8 @@ inline float inharmonicityCoeff(uint8_t note) {
 class Piano {
     public:
         Piano() = default;
-        Piano(const float &samplingRate) : samplingRate_(samplingRate), samplingDuration_(1.f / samplingRate) {}
-        Piano(const float &samplingRate, const uint8_t &note) : samplingRate_(samplingRate), samplingDuration_(1.f / samplingRate), note_(note), frequency_(440.f * pow(2.f, (float) (note - 69) / 12)) {}
+        Piano(const float &samplingRate) : samplingRate_(samplingRate), samplingDuration_(1.f / samplingRate), nyquistRate_(samplingRate * .5f) {}
+        Piano(const float &samplingRate, const uint8_t &note) : samplingRate_(samplingRate), samplingDuration_(1.f / samplingRate), nyquistRate_(samplingRate * .5f), note_(note), frequency_(440.f * pow(2.f, (float) (note - 69) / 12)) {}
 
 
         void setSamplingRate(const float &samplingRate) {
@@ -72,18 +70,19 @@ class Piano {
         float render() {
             if (!active_) return 0.f;
             const float attack = 1.f - std::exp(-lastTime_ / .004f);
-            const float release = released_ ? std::exp(-releaseTime_ / .32f) : 1.f;
+            const float releaseDecay = releaseDecay_ * pow(440.f / frequency_, alpha_);
+            const float release = released_ ? std::exp(-releaseTime_ / releaseDecay) : 1.f;
 
             float sample = 0.f;
 
             for (auto &harmonic : harmonics_.h) {
-                sample += harmonic.amplitude * harmonic.envelopeValue * std::sin(harmonic.phase);
+                if (frequency_ * harmonic.ratio < nyquistRate_) sample += harmonic.amplitude * harmonic.envelopeValue * std::sin(harmonic.phase);
                 harmonic.envelopeValue *= harmonic.envelopeDecay;
                 harmonic.phase += harmonic.phaseShift;
-                if (harmonic.phase > 2.f * pi) harmonic.phase -= 2.f * pi;
+                while (harmonic.phase > 2.f * pi) harmonic.phase -= 2.f * pi;
             }
 
-            const float hammer = .12f * std::exp(-lastTime_ / .018f) * (float) std::sin(2 * pi * frequency_ * 8.7 * lastTime_);
+            const float hammer = (frequency_ * 8.7f) < nyquistRate_ ? .12f * std::exp(-lastTime_ / .018f) * (float) std::sin(2 * pi * frequency_ * 8.7f * lastTime_) : 0.f;
 
             sample = .34f * velocityGain_ * attack * release * (sample + hammer);
             
@@ -99,13 +98,18 @@ class Piano {
     private:
         float samplingRate_ = 44100.f;
         float samplingDuration_ = 1.f / samplingRate_;
+        float nyquistRate_ = samplingRate_ * .5f;
 
         uint8_t note_;
         float frequency_;
 
         float velocityGain_ = 0.f;
         float lastTime_ = 0.f;
+
         float releaseTime_ = 0.f;
+        // decayTime(f) = releaseDecay_ * (440 / f)**alpha_
+        const float releaseDecay_ = .5f;
+        const float alpha_ = .42f;
 
         bool active_ = false;
         bool released_ = false;
@@ -156,24 +160,17 @@ class Piano {
 
 class Guitar {
     public:
-        Guitar() = default;
-        Guitar(const float &samplingRate) : samplingRate_(samplingRate) {
-            samplingDuration_ = 1.f / samplingRate_;
-        }
-        Guitar(const float &samplingRate, const uint8_t &note) : samplingRate_(samplingRate), note_(note), frequency_(440.f * pow(2.f, (float) (note - 69) / 12)) {
-            samplingDuration_ = 1.f / samplingRate_;
-            // const float B = pow(pi, 3.f) * 2.0e11f * pow(0.014f * 0.0254f, 4.f) / (64.f * 0.648f * 0.648f * 80.f);
-            const float B = pow(pi, 3.f) * 2.0e11f * pow(0.012f * 0.0254f, 4.f) / (64.f * 0.648f * 0.648f * 72.f);
-
-            for (auto &a: Hc) a.coeffs(B, 4, note);
+        Guitar(const float samplingRate, const uint8_t note) : note_(note), frequency_(440.f * pow(2.f, (float) (note - 69) / 12)) {
+            init(note);
+            setSamplingRate(samplingRate);
         }
 
-        void setSamplingRate(const float &samplingRate) {
+        void setSamplingRate(const float samplingRate) {
             samplingRate_ = samplingRate;
             samplingDuration_ = 1.f / samplingRate_;
 
             const float omega = 2.f * pi * frequency_ / samplingRate_;
-            const float dispersionDelay = Hc[0].phaseDelay(omega) * 4.f;
+            const float dispersionDelay = Hc[0].phaseDelay(omega) * (float) NUM_DISPERSION_FILTERS;
 
             const float delay = samplingRate_ / frequency_ - .5f - dispersionDelay;
             toDelay_ = (size_t) std::floor(delay);
@@ -187,41 +184,44 @@ class Guitar {
             delayBuffer_.assign(toDelay_, 0.f);
             delayBufferIdx_ = 0;
 
-            Hg.a = (1.f - d) / (1.f + d);
+            Hg.coeffs(d);
             Hg.reset();
             for (auto &a: Hc) a.reset();
             prevY_ = 0.f;
 
-            float T60 = decayTime - .55f * std::log2(frequency_ / 82.406889f);  // Low E
+            float T60 = decayDuration_ - .55f * std::log2(frequency_ / 82.406889f);  // Low E
             T60 = std::max(T60, .5f);
-            feedbackGain_ = std::exp(std::log(.001f) / (T60 * frequency_));
-            releaseMultiplier_ = std::exp(std::log(.001f) / decayTime / samplingRate_);
+            feedbackGain_ = std::exp(std::log(.001f) / T60 / frequency_);
+            releaseGain_ = std::exp(std::log(.001f) / releaseDuration_ / frequency_);
         }
 
-        void noteOn(const uint8_t &note, const uint8_t &velocity) {
-            if (!velocity || (note != note_)) return;
+        void noteOn(const uint8_t note, const uint8_t velocity) {
+            if (!velocity || note != note_ || delayBuffer_.empty()) return;
 
             active_ = true;
             released_ = false;
 
-            velocityGain_ = (float) velocity / 127;
-            releaseGain_ = 1.f;
+            velocityGain_ = (float) velocity / 127.f;
+            releaseTime_ = 0.f;
+            releasePeak_ = 0.f;
 
-            string(randomizer_);
+            delayBufferIdx_ = 0;
+            string();
 
             Hg.reset();
             for (auto &a: Hc) a.reset();
-            prevY_ = delayBuffer_.empty() ? 0.f : delayBuffer_[(delayBufferIdx_ + delayBuffer_.size() - 1) % delayBuffer_.size()];
+            prevY_ = delayBuffer_.back();
         }
 
         void noteOff() {
-            if (released_) return;
+            if (!active_ || released_) return;
             released_ = true;
+            releaseTime_ = 0.f;
+            releasePeak_ = 0.f;
         }
 
         void reset() {
             active_ = false;
-            init_ = false;
             released_ = false;
 
             Hg.reset();
@@ -229,119 +229,78 @@ class Guitar {
             prevY_ = 0.f;
         }
 
-        bool active() {
+        bool active() const {
             return active_;
-        }
-
-        float fromDelay() {
-            if (delayBuffer_.empty()) return 0.f;
-
-            const float Y = delayBuffer_[delayBufferIdx_];
-
-            // Loss filter
-            float output = (Y + prevY_) * .5f;
-            prevY_ = Y;
-            // Dispersion filter
-            for (size_t i = 0; i < 4; ++i) {
-                output = Hc[i].process(output);
-            }
-            // Tuning filter
-            output = Hg.process(output);
-
-            return output;
         }
 
         float render() {
             if (!active_) return 0.f;
 
             const float feedback = fromDelay();
-            delayBuffer_[delayBufferIdx_] = feedbackGain_ * feedback;
+            const float gain = released_ ? releaseGain_ : feedbackGain_;
+            const float sample = gain * feedback;
+
+            delayBuffer_[delayBufferIdx_] = sample;
             delayBufferIdx_ = (delayBufferIdx_ + 1) % delayBuffer_.size();
 
             if (released_) {
-                releaseGain_ *= releaseMultiplier_;
-                if (releaseGain_ < 0.01f) active_ = false;
+                releaseTime_ += samplingDuration_;
+                releasePeak_ = std::max(releasePeak_, abs(sample));
+
+                if (delayBufferIdx_ == 0) {
+                    if (releasePeak_ < .01f) active_ = false;
+                    releasePeak_ = 0.f;
+                }
+                if (releaseTime_ > releaseDuration_) active_ = false;
             }
 
-            return feedback * releaseGain_;
+            return feedback;
         }
 
     private:
-        struct TuningAllpass {
-            // H(z) = (a + z**(-1)) / (1 + a * z**(-1))
-            // a = (1 - d) / (d + 1)
-            // y[n] = a * x[n] + x[n - 1] - a * y[n - 1]
-            float a;
-            float prevX = 0, prevY = 0;
-
-            float process(const float &X) {
-                const float Y = a * X + prevX - a * prevY;
-                prevX = X;
-                prevY = Y;
-                return Y;
-            }
-
-            void reset() {
-                prevX = 0;
-                prevY = 0;
-            }
+        struct String {
+            uint8_t note;
+            float Q, d, l, T;
+            float decayDuration;
+            float releaseDuration;
         };
 
-        struct DispersionAllpass {
-            DispersionAllpass() = default;
+        void init(const uint8_t note) {
+            const float b = note < 35 ? 35.f : note > 85 ? 85.f : (float) note;
+            const String *string;
 
-            static constexpr float k1 = -0.00179f;
-            static constexpr float k2 = -0.0233f;
-            static constexpr float k3 = -2.93f;
-            static constexpr float m1 = 0.0126f;
-            static constexpr float m2 = 0.0606f;
-            static constexpr float m3 = -0.00825f;
-            static constexpr float m4 = 1.97f;
+            if (b > 63) string = &strings_[6];
+            else if (b > 58) string = &strings_[5];
+            else if (b > 54) string = &strings_[4];
+            else if (b > 49) string = &strings_[3];
+            else if (b > 44) string = &strings_[2];
+            else if (b > 39) string = &strings_[1];
+            else string = &strings_[0];
 
-            float a, d;
-            float prevX = 0, prevY = 0;
-            
-            void coeffs(const float B, const uint8_t M, const uint8_t note) {
-                const float lnB = log(B), lnM = log((float) M), I = (float) note - 20.f;
-                const float Cd = exp((m1 * lnM + m2) * lnB + m3 * lnM + m4);
-                const float kd = exp(k1 * lnB * lnB + k2 * lnB + k3);
-                d = exp(Cd - I * kd);
-                a = (1.f - d) / (d + 1.f);
-            }
+            const float fret = b - (float) string->note;
+            const float length = string->l / std::pow(2.f, fret / 12.f);
 
-            float phaseDelay(const float omega) const {
-                if (omega == 0.f) return d;
-                
-                return 2.f / omega * atan(d * tan(omega * .5f));
-            }
+            const float B = pow(pi, 3.f) * string->Q * pow(string->d, 4.f) / (64.f * length * length * string->T);
+            for (auto &a: Hc) a.coeffs(B, NUM_DISPERSION_FILTERS, note);
 
-            float process(const float &X) {
-                const float Y = a * X + prevX - a * prevY;
-                prevX = X;
-                prevY = Y;
-                return Y;
-            }
+            decayDuration_ = string->decayDuration;
+            releaseDuration_ = string->releaseDuration;
+        }
 
-            void reset() {
-                prevX = 0;
-                prevY = 0;
-            }
-        };
-
-        void string(std::mt19937 &randomizer) {
+        void string() {
             if (delayBuffer_.empty()) return;
 
             std::uniform_real_distribution<float> noise(-1, 1);
             // At least 2 fixed ends
-            const size_t numStringSamples = std::max<size_t>(2, (size_t) std::floor(toDelay_));
+            const size_t numStringSamples = std::max<size_t>(2, toDelay_);
             float mean = 0;
 
             for (size_t i = 0; i < delayBuffer_.size(); ++i) {
                 // y(x, 0) = hx / pL
                 const float x = (float) (i % numStringSamples) / ((float) numStringSamples - 1.f);
-                const float h = x < pickPosition ? x / pickPosition : (1 - x) / (1 - pickPosition);
+                const float h = x < pickPosition_ ? x / pickPosition_ : (1 - x) / (1 - pickPosition_);
 
-                const float tmp = .92f * h + .08f * noise(randomizer);
+                const float tmp = .92f * h + .08f * noise(randomizer_);
                 delayBuffer_[i] = tmp;
                 mean += tmp;
             }
@@ -352,8 +311,28 @@ class Guitar {
             }
         }
 
+        float fromDelay() {
+            const float Y = delayBuffer_[delayBufferIdx_];
+
+            // Loss filter
+            float output = (Y + prevY_) * .5f;
+            prevY_ = Y;
+            // Dispersion filter
+            for (auto &a: Hc) {
+                output = a.process(output);
+            }
+            // Tuning filter
+            output = Hg.process(output);
+
+            return output;
+        }
+
+        static constexpr size_t NUM_DISPERSION_FILTERS = 4;
+        static constexpr float pickPosition_ = .12f;
+        float decayDuration_ = 10.f;
+        float releaseDuration_ = 4.2f;
+
         bool active_ = false;
-        bool init_ = false;
 
         uint8_t note_;
         float frequency_;
@@ -373,10 +352,84 @@ class Guitar {
 
         bool released_;
         float releaseGain_;     // Release envelope decay
-        float releaseMultiplier_;
+        float releaseTime_;
+        float releasePeak_;
 
-        TuningAllpass Hg;
-        std::array<DispersionAllpass, 4> Hc;
+        Thiran Hg;
+        std::array<Thiran, NUM_DISPERSION_FILTERS> Hc;
+
+        inline static constexpr std::array<String, 7> strings_{{
+            // B1
+            {
+                35,
+                2.0e11f,
+                0.022f * 0.0254f,
+                0.648f,
+                75.0f,
+                12.0f,
+                5.2f
+            },
+            // E2
+            {
+                40,
+                2.0e11f,
+                0.018f * 0.0254f,
+                0.648f,
+                75.0f,
+                11.0f,
+                4.7f
+            },
+            // A2
+            {
+                45,
+                2.0e11f,
+                0.016f * 0.0254f,
+                0.648f,
+                80.0f,
+                10.0f,
+                4.2f
+            },
+            // D3
+            {
+                50,
+                2.0e11f,
+                0.014f * 0.0254f,
+                0.648f,
+                80.0f,
+                9.0f,
+                3.7f
+            },
+            // G3
+            {
+                55,
+                2.0e11f,
+                0.012f * 0.0254f,
+                0.648f,
+                75.0f,
+                8.0f,
+                3.2f,
+            },
+            // B3
+            {
+                59,
+                2.0e11f,
+                0.016f * 0.0254f,
+                0.648f,
+                70.0f,
+                7.0f,
+                2.7f
+            },
+            // E4
+            {
+                64,
+                2.0e11f,
+                0.012f * 0.0254f,
+                0.648f,
+                72.0f,
+                6.0f,
+                2.2f
+            }
+        }};
 };
 
 #endif
