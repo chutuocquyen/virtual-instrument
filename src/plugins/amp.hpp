@@ -3,10 +3,11 @@
 
 #include "processor.hpp"
 #include "filters/biquad.hpp"
+#include "filters/chebyshev.hpp"
 
 class preampProcessor : public Processor {
     public:
-        explicit preampProcessor(const float &samplingRate = 44100) : samplingRate_(samplingRate) {};
+        explicit preampProcessor(const float samplingRate = 44100.f) : samplingRate_(samplingRate) {};
 
         float process(const float &sample) override {
             if (!enabled_) return sample;
@@ -73,8 +74,7 @@ class preampProcessor : public Processor {
 
 class powerampProcessor : public Processor {
     public:
-        explicit powerampProcessor(const float &samplingRate = 44100, const float &cutoff = 10) : samplingRate_(samplingRate), lowpass_(samplingRate, cutoff) {
-        };
+        explicit powerampProcessor(const float samplingRate = 44100.f, const float cutoff = 10.f) : samplingRate_(samplingRate), lowpass_(4, 2.f, cutoff * 2.f / samplingRate) {};
 
         float process(const float &sample) override {
             if (!enabled_) return sample;
@@ -122,7 +122,7 @@ class powerampProcessor : public Processor {
 		}
 
     private:
-        float applyMapping(const float &sample) {
+        float applyMapping(const float sample) {
             if (sample > kp_) {
                 return ap_ * std::tanh(gp_ * (sample - kp_)) + bp_;
             }
@@ -133,7 +133,7 @@ class powerampProcessor : public Processor {
             return std::tanh(sample);
         }
 
-        float antiDerivative(const float &sample) {
+        float antiDerivative(const float sample) {
             if (sample > kp_) {
                 return bp_ * sample + ap_ / gp_ * std::log(std::cosh(gp_ * (sample - kp_))) + cp_;
             }
@@ -172,7 +172,7 @@ class powerampProcessor : public Processor {
         const float cp_ = std::log(std::cosh(kp_)) - kp_ * bp_;
         const float cn_ = std::log(std::cosh(kn_)) + kn_ * bn_;
 
-        Biquad lowpass_;
+        ChebyshevI lowpass_;
 };
 
 #endif

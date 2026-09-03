@@ -152,7 +152,7 @@ class reverbProcessor : public Processor {
         float wet_ = .15f;
         float tone_ = 10.3f;
 
-        Biquad spectralTilt{samplingRate_, 474.f, FilterType::Lowshelf, tone_};
+        Biquad spectralTilt{samplingRate_, 474.f, Biquad::FilterType::Lowshelf, tone_};
 };
 
 #endif

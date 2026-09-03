@@ -25,7 +25,7 @@ class Piano {
         void setSamplingRate(const float &samplingRate) {
             samplingRate_ = samplingRate;
             samplingDuration_ = 1.f / samplingRate;
-        };
+        }
 
         void noteOn(const uint8_t &note, const uint8_t &velocity) {
 			if (note != note_) return;
@@ -45,12 +45,13 @@ class Piano {
                 harmonic.phase = 0;
                 harmonic.phaseShift = 2 * pi * frequency_ * harmonic.ratio * samplingDuration_;
             }
-        };
+        }
+
         void noteOff() {
             if (!active_ || released_) return;
             released_ = true;
             releaseTime_ = 0;
-        };
+        }
 
         void reset() {
             velocityGain_ = 0;
@@ -62,10 +63,11 @@ class Piano {
 
         bool active() const {
             return active_;
-        };
+        }
+
         uint8_t note() const {
             return note_;
-        };
+        }
 
         float render() {
             if (!active_) return 0.f;
@@ -254,16 +256,27 @@ class Guitar {
                 if (releaseTime_ > releaseDuration_) active_ = false;
             }
 
-            return feedback;
+            return feedback * .67f;
         }
 
     private:
         struct String {
             uint8_t note;
+            // B = pi**3 * Q * d**4 / 64 / l**2 / T
             float Q, d, l, T;
             float decayDuration;
             float releaseDuration;
         };
+
+        inline static constexpr std::array<String, 7> strings_{{
+            {35, 2.e11f, 0.022f * 0.0254f, 0.648f, 75.f, 12.f, 5.2f},   // B1
+            {40, 2.e11f, 0.018f * 0.0254f, 0.648f, 75.f, 11.f, 4.7f},   // E2
+            {45, 2.e11f, 0.016f * 0.0254f, 0.648f, 80.f, 10.f, 4.2f},   // A2
+            {50, 2.e11f, 0.014f * 0.0254f, 0.648f, 80.f, 9.0f, 3.7f},   // D3
+            {55, 2.e11f, 0.012f * 0.0254f, 0.648f, 75.f, 8.0f, 3.2f},   // G3
+            {59, 2.e11f, 0.016f * 0.0254f, 0.648f, 70.f, 7.0f, 2.7f},   // B3
+            {64, 2.e11f, 0.012f * 0.0254f, 0.648f, 72.f, 6.0f, 2.2f},   // E4
+        }};
 
         void init(const uint8_t note) {
             const float b = note < 35 ? 35.f : note > 85 ? 85.f : (float) note;
@@ -280,7 +293,7 @@ class Guitar {
             const float fret = b - (float) string->note;
             const float length = string->l / std::pow(2.f, fret / 12.f);
 
-            const float B = pow(pi, 3.f) * string->Q * pow(string->d, 4.f) / (64.f * length * length * string->T);
+            const float B = pow(pi, 3.f) * string->Q * pow(string->d, 4.f) / 64.f / length / length / string->T;
             for (auto &a: Hc) a.coeffs(B, NUM_DISPERSION_FILTERS, note);
 
             decayDuration_ = string->decayDuration;
@@ -301,6 +314,7 @@ class Guitar {
                 const float h = x < pickPosition_ ? x / pickPosition_ : (1 - x) / (1 - pickPosition_);
 
                 const float tmp = .92f * h + .08f * noise(randomizer_);
+                // const float tmp = noise(randomizer_);
                 delayBuffer_[i] = tmp;
                 mean += tmp;
             }
@@ -357,79 +371,6 @@ class Guitar {
 
         Thiran Hg;
         std::array<Thiran, NUM_DISPERSION_FILTERS> Hc;
-
-        inline static constexpr std::array<String, 7> strings_{{
-            // B1
-            {
-                35,
-                2.0e11f,
-                0.022f * 0.0254f,
-                0.648f,
-                75.0f,
-                12.0f,
-                5.2f
-            },
-            // E2
-            {
-                40,
-                2.0e11f,
-                0.018f * 0.0254f,
-                0.648f,
-                75.0f,
-                11.0f,
-                4.7f
-            },
-            // A2
-            {
-                45,
-                2.0e11f,
-                0.016f * 0.0254f,
-                0.648f,
-                80.0f,
-                10.0f,
-                4.2f
-            },
-            // D3
-            {
-                50,
-                2.0e11f,
-                0.014f * 0.0254f,
-                0.648f,
-                80.0f,
-                9.0f,
-                3.7f
-            },
-            // G3
-            {
-                55,
-                2.0e11f,
-                0.012f * 0.0254f,
-                0.648f,
-                75.0f,
-                8.0f,
-                3.2f,
-            },
-            // B3
-            {
-                59,
-                2.0e11f,
-                0.016f * 0.0254f,
-                0.648f,
-                70.0f,
-                7.0f,
-                2.7f
-            },
-            // E4
-            {
-                64,
-                2.0e11f,
-                0.012f * 0.0254f,
-                0.648f,
-                72.0f,
-                6.0f,
-                2.2f
-            }
-        }};
 };
 
 #endif

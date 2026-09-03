@@ -6,7 +6,7 @@
 
 class Equalizer : public Processor {
     public:
-        explicit Equalizer(const float &samplingRate = 44100) : samplingRate_(samplingRate), lowEQ_(samplingRate_, lowCutoff_, FilterType::Lowshelf, lowGain_, lowQ_), midEQ_(samplingRate_, midCutoff_, FilterType::Bell, midGain_, midQ_), highEQ_(samplingRate_, highCutoff_, FilterType::Highshelf, highGain_, highQ_) {};
+        explicit Equalizer(const float &samplingRate = 44100) : samplingRate_(samplingRate), lowEQ_(samplingRate_, lowCutoff_, Biquad::FilterType::Lowshelf, lowGain_, lowQ_), midEQ_(samplingRate_, midCutoff_, Biquad::FilterType::Bell, midGain_, midQ_), highEQ_(samplingRate_, highCutoff_, Biquad::FilterType::Highshelf, highGain_, highQ_) {};
 
         float process(const float &sample) override {
 			if (!enabled_) return sample;

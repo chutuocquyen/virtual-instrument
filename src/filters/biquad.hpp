@@ -4,16 +4,16 @@
 #include <cmath>
 #include <numbers>
 
-enum class FilterType {
-    Lowpass,
-    Lowshelf,
-    Highshelf,
-    Bell,
-};
-
 class Biquad {
     public:
-        explicit Biquad(const float &samplingRate = 44100, const float &cutoff = 10, const FilterType type = FilterType::Lowpass, const float &gain = 0, const float &Q = 1 / std::numbers::sqrt2_v<float>) : samplingRate_(samplingRate), cutoff_(cutoff), type_(type), gain_(gain), Q_(Q) {
+        enum class FilterType {
+            Lowpass,
+            Lowshelf,
+            Highshelf,
+            Bell,
+        };
+        
+        explicit Biquad(const float samplingRate = 44100, const float cutoff = 10, const FilterType type = FilterType::Lowpass, const float gain = 0, const float Q = 1 / std::numbers::sqrt2_v<float>) : samplingRate_(samplingRate), cutoff_(cutoff), type_(type), gain_(gain), Q_(Q) {
             update();
         }
 
@@ -106,7 +106,6 @@ class Biquad {
 
         float a0, a1, a2, b0, b1, b2;
         float s1_ = 0, s2_ = 0;
-
 
         FilterType type_;
 };
