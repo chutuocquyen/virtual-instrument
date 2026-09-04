@@ -5,12 +5,12 @@
 
 class wahProcessor : public Processor {
     public:
-        explicit wahProcessor(const float &samplingRate = 44100) : samplingRate_(samplingRate) {
+        explicit wahProcessor(const float samplingRate = 44100) : samplingRate_(samplingRate) {
             reset();
             update();
         }
 
-        float process(const float &sample) override {
+        float process(const float sample) override {
             if (!enabled_) return sample;
 
             const float i3 = sample + i0 - 2 * i2;
@@ -23,7 +23,7 @@ class wahProcessor : public Processor {
             return (1 - mix_) * sample + mix_ * std::tanh(i1 * outputGain_);
         }
 
-        void enable(const bool &a) override {
+        void enable(const bool a) override {
             enabled_ = a;
             if (!enabled_) reset();
         }

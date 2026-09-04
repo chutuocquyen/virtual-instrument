@@ -7,9 +7,9 @@
 
 class preampProcessor : public Processor {
     public:
-        explicit preampProcessor(const float samplingRate = 44100.f) : samplingRate_(samplingRate) {};
+        explicit preampProcessor(const float samplingRate = 44100.f) : samplingRate_(samplingRate) {}
 
-        float process(const float &sample) override {
+        float process(const float sample) override {
             if (!enabled_) return sample;
             
             const float driven = sample * preGain_;
@@ -20,7 +20,7 @@ class preampProcessor : public Processor {
             return (nonlinear * blend_ + (1 - blend_) * driven) * postGain_;
         }
 
-        void enable(const bool &a) override {
+        void enable(const bool a) override {
             enabled_ = a;
             if (!enabled_) reset();
         }
@@ -29,24 +29,24 @@ class preampProcessor : public Processor {
             lowpass_.reset();
         }
 
-		void setPreGain(const float &a) {
+		void setPreGain(const float a) {
 			preGain_ = a;
 		}
-		void setPostGain(const float &a) {
+		void setPostGain(const float a) {
 			postGain_ = a;
 		}
-		void setBias(const float &a) {
+		void setBias(const float a) {
 			bias_ = a;
 		}
-		void setBlend(const float &a) {
+		void setBlend(const float a) {
 			blend_ = a;
 		}
-		void setCutoff(const float &a) {
+		void setCutoff(const float a) {
 			lowpass_.setCutoff(a);
 		}
 
     private:
-        float applyMapping(const float &sample) {
+        float applyMapping(const float sample) {
             float output = polynomialCoeffs[NUM_COEFFS];
             for (size_t i = NUM_COEFFS; i > 0; --i) {
                 output = output * sample + polynomialCoeffs[i - 1];
@@ -74,9 +74,9 @@ class preampProcessor : public Processor {
 
 class powerampProcessor : public Processor {
     public:
-        explicit powerampProcessor(const float samplingRate = 44100.f, const float cutoff = 10.f) : samplingRate_(samplingRate), lowpass_(4, 2.f, cutoff * 2.f / samplingRate) {};
+        explicit powerampProcessor(const float samplingRate = 44100.f, const float cutoff = 10.f) : samplingRate_(samplingRate), lowpass_(4, 2.f, cutoff * 2.f / samplingRate) {}
 
-        float process(const float &sample) override {
+        float process(const float sample) override {
             if (!enabled_) return sample;
             
             const float driven = sample * preGain_;
@@ -94,7 +94,7 @@ class powerampProcessor : public Processor {
             return (nonlinear * blend_ + (1 - blend_) * driven) * postGain_;
         }
 
-        void enable(const bool &a) override {
+        void enable(const bool a) override {
             enabled_ = a;
             if (!enabled_) reset();
         }
@@ -105,19 +105,19 @@ class powerampProcessor : public Processor {
             previousAntiDerivative_ = 0;
         }
 
-		void setPreGain(const float &a) {
+		void setPreGain(const float a) {
 			preGain_ = a;
 		}
-		void setPostGain(const float &a) {
+		void setPostGain(const float a) {
 			postGain_ = a;
 		}
-		void setBias(const float &a) {
+		void setBias(const float a) {
 			bias_ = a;
 		}
-		void setBlend(const float &a) {
+		void setBlend(const float a) {
 			blend_ = a;
 		}
-		void setCutoff(const float &a) {
+		void setCutoff(const float a) {
 			lowpass_.setCutoff(a);
 		}
 

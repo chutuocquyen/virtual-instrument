@@ -16,10 +16,10 @@ class Processor {
         virtual MidiEventBuffer process(const MidiEvent &event) {
             return MidiEventBuffer(event);
         }
-        virtual float process(const float &sample) {
+        virtual float process(const float sample) {
             return sample;
         }
-        virtual void enable(const bool &a) = 0;
+        virtual void enable(const bool a) = 0;
         virtual void reset() = 0;
 };
 

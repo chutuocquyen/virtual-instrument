@@ -35,7 +35,7 @@ class sustainProcessor : public Processor {
 			state_.reset();
 		}
 
-		void enable(const bool &a) override {
+		void enable(const bool a) override {
 			enabled_ = a;
 			if (!enabled_) reset();
 		}

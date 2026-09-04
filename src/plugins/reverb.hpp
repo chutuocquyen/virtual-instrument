@@ -25,12 +25,12 @@ struct Feedback {
 
 class reverbProcessor : public Processor {
     public:
-        explicit reverbProcessor(const float &samplingRate = 44100) : samplingRate_(samplingRate) {
+        explicit reverbProcessor(const float samplingRate = 44100) : samplingRate_(samplingRate) {
             update();
             updateDecay();
-        };
+        }
 
-        float process(const float &sample) override {
+        float process(const float sample) override {
             if (!enabled_) return sample;
 
             // Tap delay
@@ -46,7 +46,7 @@ class reverbProcessor : public Processor {
             // Comb filters
             float b = 0;
             for (size_t i = 0; i < NUM_COMB_FILTERS; ++i) {
-                auto &comb = combFilters_[i];
+                auto comb = combFilters_[i];
                 const float delayed = comb.buffer[comb.idx];
                 comb.damped = delayed * (1 - damping_) + comb.damped * damping_;
                 comb.buffer[comb.idx++] = a + comb.damped * feedbackGains_[i];
@@ -71,7 +71,7 @@ class reverbProcessor : public Processor {
             return sample + d * wet_;
         }
 
-        void enable(const bool &a) override {
+        void enable(const bool a) override {
             enabled_ = a;
             if (!enabled_) reset();
         }
