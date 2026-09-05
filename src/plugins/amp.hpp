@@ -1,13 +1,13 @@
-#ifndef AMP_PROCESSOR
-#define AMP_PROCESSOR
+#ifndef AMP
+#define AMP
 
 #include "processor.hpp"
 #include "filters/biquad.hpp"
 #include "filters/chebyshev.hpp"
 
-class preampProcessor : public Processor {
+class Preamp : public Processor {
     public:
-        explicit preampProcessor(const float samplingRate = 44100.f) : samplingRate_(samplingRate) {}
+        explicit Preamp(const float samplingRate = 44100.f) : samplingRate_(samplingRate) {}
 
         float process(const float sample) override {
             if (!enabled_) return sample;
@@ -15,7 +15,7 @@ class preampProcessor : public Processor {
             const float driven = sample * preGain_;
             const float biased = driven - lowpass_.process(std::abs(driven)) * bias_;
 
-            const float nonlinear = applyMapping(std::clamp(biased, -mappingRange_, mappingRange_));
+            const float nonlinear = mapping(std::clamp(biased, -mappingRange_, mappingRange_));
 
             return (nonlinear * blend_ + (1 - blend_) * driven) * postGain_;
         }
@@ -46,7 +46,7 @@ class preampProcessor : public Processor {
 		}
 
     private:
-        float applyMapping(const float sample) {
+        float mapping(const float sample) {
             float output = polynomialCoeffs[NUM_COEFFS];
             for (size_t i = NUM_COEFFS; i > 0; --i) {
                 output = output * sample + polynomialCoeffs[i - 1];
@@ -72,9 +72,9 @@ class preampProcessor : public Processor {
         Biquad lowpass_{samplingRate_, 10.f};
 };
 
-class powerampProcessor : public Processor {
+class Poweramp : public Processor {
     public:
-        explicit powerampProcessor(const float samplingRate = 44100.f, const float cutoff = 10.f) : samplingRate_(samplingRate), lowpass_(4, 2.f, cutoff * 2.f / samplingRate) {}
+        explicit Poweramp(const float samplingRate = 44100.f, const float cutoff = 10.f) : samplingRate_(samplingRate), lowpass_(4, 2.f, cutoff * 2.f / samplingRate) {}
 
         float process(const float sample) override {
             if (!enabled_) return sample;
@@ -87,7 +87,7 @@ class powerampProcessor : public Processor {
 
             float nonlinear;
             if (abs(d) > 1e-5) nonlinear = (t - previousAntiDerivative_) / d;
-            else nonlinear = applyMapping(biased);
+            else nonlinear = mapping(biased);
             previousBiased_ = biased;
             previousAntiDerivative_ = t;
 
@@ -122,7 +122,7 @@ class powerampProcessor : public Processor {
 		}
 
     private:
-        float applyMapping(const float sample) {
+        float mapping(const float sample) {
             if (sample > kp_) {
                 return ap_ * std::tanh(gp_ * (sample - kp_)) + bp_;
             }

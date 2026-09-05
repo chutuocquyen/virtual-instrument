@@ -1,11 +1,11 @@
-#ifndef WAH_PROCESSOR
-#define WAH_PROCESSOR
+#ifndef WAH
+#define WAH
 
 #include "processor.hpp"
 
-class wahProcessor : public Processor {
+class Wah : public Processor {
     public:
-        explicit wahProcessor(const float samplingRate = 44100) : samplingRate_(samplingRate) {
+        explicit Wah(const float samplingRate = 44100) : samplingRate_(samplingRate) {
             reset();
             update();
         }

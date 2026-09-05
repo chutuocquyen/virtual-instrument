@@ -4,13 +4,8 @@
 #include <array>
 #include "midi.hpp"
 
-struct State {
-    virtual ~State() = default;
-	virtual void reset() = 0;
-};
-
 class Processor {
-    public:
+    public:        
         virtual ~Processor() = default;
 
         virtual MidiEventBuffer process(const MidiEvent &event) {

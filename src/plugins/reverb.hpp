@@ -1,5 +1,5 @@
-#ifndef REVERB_PROCESSOR
-#define REVERB_PROCESSOR
+#ifndef REVERB
+#define REVERB
 
 #include "processor.hpp"
 #include "filters/biquad.hpp"
@@ -23,9 +23,9 @@ struct Feedback {
     }
 };
 
-class reverbProcessor : public Processor {
+class Reverb : public Processor {
     public:
-        explicit reverbProcessor(const float samplingRate = 44100) : samplingRate_(samplingRate) {
+        explicit Reverb(const float samplingRate = 44100) : samplingRate_(samplingRate) {
             update();
             updateDecay();
         }

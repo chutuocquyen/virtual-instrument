@@ -1,21 +1,9 @@
-#ifndef SUSTAIN_PROCESSOR
-#define SUSTAIN_PROCESSOR
+#ifndef SUSTAIN
+#define SUSTAIN
 
 #include "processor.hpp"
 
-struct sustainState : public State {
-	bool pedalDown = false;
-	std::array<bool, NUM_NOTES> keysDown{false};
-	std::array<bool, NUM_NOTES> sustainedNotes{false};
-
-	void reset() override {
-		pedalDown = false;
-		keysDown.fill(false);
-		sustainedNotes.fill(false);
-	}
-};
-
-class sustainProcessor : public Processor {
+class Sustain : public Processor {
     public:
         MidiEventBuffer process(const MidiEvent &event) override {
 			if (!enabled_) return MidiEventBuffer(event);
@@ -45,11 +33,23 @@ class sustainProcessor : public Processor {
 		}
 
     private:
+		struct State {
+			bool pedalDown = false;
+			std::array<bool, NUM_NOTES> keysDown{false};
+			std::array<bool, NUM_NOTES> sustainedNotes{false};
+
+			void reset() {
+				pedalDown = false;
+				keysDown.fill(false);
+				sustainedNotes.fill(false);
+			}
+		};
+
         static constexpr uint8_t SUSTAIN_CONTROLLER = 64;
         static constexpr uint8_t SUSTAIN_THRESHOLD = 64;
 
         bool enabled_ = false;
-        sustainState state_;
+        State state_;
 
 		MidiEventBuffer handleNoteOn(const MidiEvent &event) {
 			state_.keysDown[event.data1] = true;
