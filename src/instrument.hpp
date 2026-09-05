@@ -7,28 +7,32 @@
 
 class Instrument {
     public:
-        explicit Instrument(const float &samplingRate = 44100.f) : samplingRate_(samplingRate) {}
+        explicit Instrument(const float samplingRate = 44100.f) : samplingRate_(samplingRate) {}
         virtual ~Instrument() = default;
-        virtual void setSamplingRate(const float &samplingRate) = 0;
+        virtual void setSamplingRate(const float samplingRate) = 0;
         virtual void process(const MidiEvent &event) = 0;
         virtual float render() = 0;
+        virtual void transpose(const int a) = 0;
         virtual void reset() = 0;
 
     protected:
+		static constexpr int C3 = 48;
+		static constexpr size_t VOICE_RANGE = 21;
+
         float samplingRate_ = 44100;
-        std::array<uint8_t, 128> active_{};
-		std::array<bool, 128> indices_{};
+        std::array<uint8_t, VOICE_RANGE> active_{};
+		std::array<bool, VOICE_RANGE> indices_{};
         std::size_t activeCounter_ = 0;
 };
 
 template<typename Voice>
 class VirtualInstrument: public Instrument {
     public:
-        explicit VirtualInstrument(const float &samplingRate = 44100.f) : notes_(init(samplingRate, std::make_index_sequence<128>())) {
+        explicit VirtualInstrument(const float samplingRate = 44100.f) : notes_(init(samplingRate, std::make_index_sequence<VOICE_RANGE>())) {
             samplingRate_ = samplingRate;
         }
 
-        void setSamplingRate(const float &samplingRate) override {
+        void setSamplingRate(const float samplingRate) override {
             samplingRate_ = samplingRate;
             for (auto &note: notes_) {
                 note.setSamplingRate(samplingRate_);
@@ -36,25 +40,24 @@ class VirtualInstrument: public Instrument {
         }
 
         void process(const MidiEvent &event) override {
+			const size_t idx = (size_t) event.data1 - C3;
+
             switch (event.type) {
                 case MidiEventType::NoteOn:
-                    if (event.data1 < 128) {
-                        if (event.data2 == 0) {
-                            notes_[event.data1].noteOff();
-                        } else {
-                            if (!indices_[event.data1]) {
-                                active_[activeCounter_++] = event.data1;
-								indices_[event.data1] = true;
-                            }
-                            notes_[event.data1].noteOn(event.data1, event.data2);
-                        }
-                    }
+					if (event.data2 == 0) {
+						notes_[idx].noteOff();
+					} else {
+						if (!indices_[idx]) {
+							active_[activeCounter_++] = (uint8_t) idx;
+							indices_[idx] = true;
+						}
+						notes_[idx].transpose(transpose_);
+						notes_[idx].noteOn(event.data1, event.data2);
+					}
                     break;
 
                 case MidiEventType::NoteOff:
-                    if (event.data1 < 128) {
-                        notes_[event.data1].noteOff();
-                    }
+					notes_[idx].noteOff();
                     break;
 
                 case MidiEventType::ControlChange:
@@ -82,6 +85,14 @@ class VirtualInstrument: public Instrument {
             return output;
         }
 
+        void transpose(const int a) override {
+            transpose_ = a;
+
+            for (size_t i = 0; i < activeCounter_; ++i) {
+                notes_[active_[i]].transpose(a);
+            }
+        }
+
         void reset() override {
             for (size_t i = 0; i < activeCounter_; ++i) {
                 notes_[active_[i]].reset();
@@ -92,10 +103,13 @@ class VirtualInstrument: public Instrument {
 
     private:
         template<size_t... I>
-        static std::array<Voice, 128> init(const float &samplingRate, std::index_sequence<I...>) {
-            return { Voice(samplingRate, (uint8_t) I)... };
+        static std::array<Voice, VOICE_RANGE> init(const float &samplingRate, std::index_sequence<I...>) {
+            return {
+				Voice(samplingRate, (uint8_t) (C3 + I))...
+			};
         }
-        std::array<Voice, 128> notes_;
+        std::array<Voice, VOICE_RANGE> notes_;
+        int transpose_ = 0;
 };
 
 using VirtualPiano = VirtualInstrument<Piano>;
