@@ -189,6 +189,7 @@ class Guitar {
 
             delayBuffer_.assign(delaySize, 0.f);
             delayBufferIdx_ = 0;
+            transposeBuffer_.assign(delaySize, 0.f);
 
             updateTuning();
             reset();
@@ -270,9 +271,36 @@ class Guitar {
 
         void transpose(const int a) {
             if (a == transpose_) return;
+
+            const size_t prevDelay = toDelay_;
             transpose_ = a;
             updateTuning();
-            prevY_ = delayBuffer_[(delayBufferIdx_ + delayBuffer_.size() - toDelay_ - 1) % delayBuffer_.size()];
+
+            if (!active_) return;
+
+            const size_t a0 = (delayBufferIdx_ + delayBuffer_.size() - prevDelay) % delayBuffer_.size();
+            for (size_t i = 0; i < prevDelay; ++i) {
+                transposeBuffer_[i] = delayBuffer_[(a0 + i) % delayBuffer_.size()];
+            }
+
+            std::fill(delayBuffer_.begin(), delayBuffer_.end(), 0.f);
+            delayBufferIdx_ = 0;
+
+            const float step = (float) prevDelay / (float) toDelay_;
+            const size_t a1 = delayBuffer_.size() - toDelay_;
+
+            for (size_t i = 0; i < toDelay_; ++i) {
+                const float p = (float) i * step;
+                const size_t l = (size_t) p;
+                const float tmp = p - (float) l;
+                delayBuffer_[a1 + i] = transposeBuffer_[l] + tmp * (transposeBuffer_[(l + 1) % prevDelay] - transposeBuffer_[l]);
+            }
+
+            prevY_ = delayBuffer_[delayBuffer_.size() - 1];
+            delayBuffer_[a1 - 1] = prevY_;
+
+            Hg.reset();
+            for (auto &a: Hc) a.reset();
         }
 
     private:
@@ -402,6 +430,7 @@ class Guitar {
 		std::mt19937 randomizer_{};
 
         std::vector<float> delayBuffer_{};
+        std::vector<float> transposeBuffer_{};
         size_t delayBufferIdx_ = 0;
         size_t toDelay_;
         float prevY_ = 0;
