@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Virtual Instrument</title>
+
+	<style>
+		.effect-controls {
+			max-width: 500px;
+		}
+
+        .effect-controls {
+            display: grid;
+            grid-template-columns: minmax(8rem, auto) minmax(12rem, 1fr) 4.5rem;
+            align-items: center;
+            column-gap: 0.5rem;
+            row-gap: 0.35rem;
+            margin-top: 0.5rem;
+        }
+
+        .effect-controls .effect-toggle {
+            grid-column: 1 / -1;
+            display: inline-flex;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .effect-controls input[type="range"] {
+            width: 100%;
+        }
+
+        .effect-controls output {
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+
+        @media (max-width: 540px) {
+            .effect-controls {
+                grid-template-columns: minmax(6rem, auto) minmax(0, 1fr) 4.5rem;
+            }
+        }
+	</style>
+</head>
+<body>
+    <div id="status">
+        Instrument: <label id="instrument">Piano</label>
+        Key: <label id="key">C</label>
+        Octave: <label id="octave">3</label>
+    </div>
+
+    <fieldset id="sustain" class="effect-controls">
+        <legend>Sustain</legend>
+        <label><input id="sustain" type="checkbox"> Enabled</label>
+    </fieldset>
+
+    <fieldset id="wah-controls" class="effect-controls" data-effect="1">
+        <legend>Wah</legend>
+        <label class="effect-toggle"><input id="wah" type="checkbox"> Enabled</label>
+
+        <label for="wah-cutoff">Cutoff</label>
+        <input id="wah-cutoff" type="range" min="200" max="3000" step="10" value="1000" data-parameter="0" data-digits="0">
+        <output id="wah-cutoff-value" for="wah-cutoff">1000</output>
+
+        <label for="wah-bandwidth">Bandwidth</label>
+        <input id="wah-bandwidth" type="range" min="100" max="2000" step="10" value="550" data-parameter="1" data-digits="0">
+        <output id="wah-bandwidth-value" for="wah-bandwidth">550</output>
+
+        <label for="wah-mix">Mix</label>
+        <input id="wah-mix" type="range" min="0" max="1" step="0.01" value="1.00" data-parameter="2" data-digits="2" data-suffix="">
+        <output id="wah-mix-value" for="wah-mix">1.00</output>
+
+        <label for="wah-output-gain">Output gain</label>
+        <input id="wah-output-gain" type="range" min="0" max="5" step="0.1" value="2.0" data-parameter="3" data-digits="1" data-suffix="">
+        <output id="wah-output-gain-value" for="wah-output-gain">2.0</output>
+    </fieldset>
+
+    <fieldset id="preamp-controls" class="effect-controls" data-effect="2">
+        <legend>Preamp</legend>
+        <label class="effect-toggle"><input id="preamp" type="checkbox"> Enabled</label>
+
+        <label for="preamp-pre-gain">Pre-gain</label>
+        <input id="preamp-pre-gain" type="range" min="0" max="5" step="0.1" value="2.0" data-parameter="0" data-digits="1" data-suffix="">
+        <output id="preamp-pre-gain-value" for="preamp-pre-gain">2.0</output>
+
+        <label for="preamp-post-gain">Post-gain</label>
+        <input id="preamp-post-gain" type="range" min="0" max="5" step="0.1" value="0.9" data-parameter="1" data-digits="1" data-suffix="">
+        <output id="preamp-post-gain-value" for="preamp-post-gain">0.9</output>
+
+        <label for="preamp-bias">Bias</label>
+        <input id="preamp-bias" type="range" min="0" max="2" step="0.01" value="0.20" data-parameter="2" data-digits="2" data-suffix="">
+        <output id="preamp-bias-value" for="preamp-bias">0.20</output>
+
+        <label for="preamp-blend">Blend</label>
+        <input id="preamp-blend" type="range" min="0" max="1" step="0.01" value="0.85" data-parameter="3" data-digits="2" data-suffix="">
+        <output id="preamp-blend-value" for="preamp-blend">0.85</output>
+
+        <label for="preamp-cutoff">Cutoff</label>
+        <input id="preamp-cutoff" type="range" min="0.1" max="100" step="0.1" value="10.0" data-parameter="4" data-digits="1">
+        <output id="preamp-cutoff-value" for="preamp-cutoff">10.0</output>
+    </fieldset>
+
+    <fieldset id="eq-controls" class="effect-controls" data-effect="3">
+        <legend>EQ</legend>
+        <label class="effect-toggle"><input id="eq" type="checkbox"> Enabled</label>
+
+        <label for="eq-bass">Bass</label>
+        <input id="eq-bass" type="range" min="0" max="1" step="0.01" value="0.50" data-parameter="0" data-digits="2" data-suffix="">
+        <output id="eq-bass-value" for="eq-bass">0.50</output>
+
+        <label for="eq-middle">Middle</label>
+        <input id="eq-middle" type="range" min="0" max="1" step="0.01" value="1.00" data-parameter="1" data-digits="2" data-suffix="">
+        <output id="eq-middle-value" for="eq-middle">1.00</output>
+
+        <label for="eq-treble">Treble</label>
+        <input id="eq-treble" type="range" min="0" max="1" step="0.01" value="1.00" data-parameter="2" data-digits="2" data-suffix="">
+        <output id="eq-treble-value" for="eq-treble">1.00</output>
+
+        <label for="eq-level">Level</label>
+        <input id="eq-level" type="range" min="0" max="5" step="0.1" value="2.0" data-parameter="3" data-digits="1" data-suffix="">
+        <output id="eq-level-value" for="eq-level">2.0</output>
+    </fieldset>
+
+    <fieldset id="poweramp-controls" class="effect-controls" data-effect="4">
+        <legend>Poweramp</legend>
+        <label class="effect-toggle"><input id="poweramp" type="checkbox"> Enabled</label>
+
+        <label for="poweramp-pre-gain">Pre-gain</label>
+        <input id="poweramp-pre-gain" type="range" min="0" max="5" step="0.1" value="2.0" data-parameter="0" data-digits="1" data-suffix="">
+        <output id="poweramp-pre-gain-value" for="poweramp-pre-gain">2.0</output>
+
+        <label for="poweramp-post-gain">Post-gain</label>
+        <input id="poweramp-post-gain" type="range" min="0" max="5" step="0.1" value="0.9" data-parameter="1" data-digits="1" data-suffix="">
+        <output id="poweramp-post-gain-value" for="poweramp-post-gain">0.9</output>
+
+        <label for="poweramp-bias">Bias</label>
+        <input id="poweramp-bias" type="range" min="0" max="2" step="0.01" value="0.20" data-parameter="2" data-digits="2" data-suffix="">
+        <output id="poweramp-bias-value" for="poweramp-bias">0.20</output>
+
+        <label for="poweramp-blend">Blend</label>
+        <input id="poweramp-blend" type="range" min="0" max="1" step="0.01" value="0.85" data-parameter="3" data-digits="2" data-suffix="">
+        <output id="poweramp-blend-value" for="poweramp-blend">0.85</output>
+
+        <label for="poweramp-cutoff">Cutoff</label>
+        <input id="poweramp-cutoff" type="range" min="1" max="100" step="1" value="10.0" data-parameter="4" data-digits="1">
+        <output id="poweramp-cutoff-value" for="poweramp-cutoff">10.0</output>
+    </fieldset>
+
+    <fieldset id="reverb-controls" class="effect-controls" data-effect="5">
+        <legend>Reverb</legend>
+        <label class="effect-toggle"><input id="reverb" type="checkbox"> Enabled</label>
+
+        <label for="reverb-wet">Wet level</label>
+        <input id="reverb-wet" type="range" min="0" max="1" step="0.01" value="0.15" data-parameter="0" data-digits="2" data-suffix="">
+        <output id="reverb-wet-value" for="reverb-wet">0.15</output>
+
+        <label for="reverb-decay">Decay</label>
+        <input id="reverb-decay" type="range" min="0.1" max="10" step="0.1" value="1.7" data-parameter="1" data-digits="1">
+        <output id="reverb-decay-value" for="reverb-decay">1.7</output>
+
+        <label for="reverb-damping">Damping</label>
+        <input id="reverb-damping" type="range" min="0" max="0.95" step="0.01" value="0.35" data-parameter="2" data-digits="2" data-suffix="">
+        <output id="reverb-damping-value" for="reverb-damping">0.35</output>
+
+        <label for="reverb-tone">Tone</label>
+        <input id="reverb-tone" type="range" min="-12" max="12" step="0.1" value="10.3" data-parameter="3" data-digits="1">
+        <output id="reverb-tone-value" for="reverb-tone">10.3</output>
+    </fieldset>
+
+    <script src="virtual_instrument.js"></script>
+</body>
+</html>
