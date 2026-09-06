@@ -65,7 +65,7 @@ class Preamp : public Processor {
 
         float preGain_ = 2.f;
         float bias_ = .2f;
-        float mappingRange_ = 4.f;
+        float mappingRange_ = 1.f;
         float blend_ = .85f;
         float postGain_ = .9f;
 
@@ -80,7 +80,7 @@ class Poweramp : public Processor {
             if (!enabled_) return sample;
             
             const float driven = sample * preGain_;
-            const float biased = std::clamp(driven - lowpass_.process(std::abs(driven)) * bias_, -mappingRange_, mappingRange_);
+            const float biased = driven - lowpass_.process(std::abs(driven)) * bias_;
 
             const float t = antiDerivative(biased);
             const float d = biased - previousBiased_;
@@ -118,7 +118,7 @@ class Poweramp : public Processor {
 			blend_ = a;
 		}
 		void setCutoff(const float a) {
-			lowpass_.setCutoff(a);
+			lowpass_.setCutoff(2.f * a / samplingRate_);
 		}
 
     private:
@@ -155,7 +155,7 @@ class Poweramp : public Processor {
 
         float preGain_ = 2.f;
         float bias_ = .2f;
-        float mappingRange_ = 4.f;
+        // float mappingRange_ = 1.f;
         float blend_ = .85f;
         float postGain_ = .9f;
 

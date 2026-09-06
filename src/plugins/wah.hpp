@@ -20,7 +20,7 @@ class Wah : public Processor {
             i2 += g3 * i3 + g4 * v1;     // low
             i0 = sample;
 
-            return (1 - mix_) * sample + mix_ * std::tanh(i1 * outputGain_);
+            return (1 - mix_) * sample + mix_ * std::tanh(i1 * gain_);
         }
 
         void enable(const bool a) override {
@@ -32,10 +32,20 @@ class Wah : public Processor {
             i0 = i1 = i2 = 0;
         }
 
-        // void setPedal(const float &position) {
-        //     pedal_ = std::clamp(position, 0, 1);
-        //     update();
-        // }
+        void setCutoff(const float a) {
+			cutoff = a;
+            update();
+        }
+        void setBandwidth(const float a) {
+			bandwidth = a;
+            update();
+        }
+        void setMix(const float a) {
+			mix_ = a;
+        }
+        void setGain(const float a) {
+			gain_ = a;
+        }
 
     private:
         void update() {
@@ -60,7 +70,7 @@ class Wah : public Processor {
 
         // float pedal_;
         float mix_ = 1;
-        float outputGain_ = 2;
+        float gain_ = 2;
 
         float g1, g2, g3, g4;
 

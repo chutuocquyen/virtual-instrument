@@ -74,6 +74,23 @@ class ToneStacks : public Processor {
             s3 = 0.f;
         }
 
+		void setBass(const float a) {
+			bass_ = a;
+			update();
+		}
+		void setMiddle(const float a) {
+			middle_ = a;
+			update();
+		}
+		void setTreble(const float a) {
+			treble_ = a;
+			update();
+		}
+
+		void setLevel(const float a) {
+			level_ = a;
+		}
+
     private:
         void update() {
             constexpr double R1 = TS::R1;

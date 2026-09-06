@@ -1,11 +1,13 @@
 #ifndef NOTE_SYNTHESIS
 #define NOTE_SYNTHESIS
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstdint>
 #include <numbers>
 #include <random>
+#include <vector>
 #include "filters/thiran.hpp"
 
 constexpr float pi = std::numbers::pi_v<float>;
@@ -301,6 +303,9 @@ class Guitar {
 
             Hg.reset();
             for (auto &a: Hc) a.reset();
+
+			releasePeak_ = 0.f;
+			releaseCounter_ = toDelay_;
         }
 
     private:

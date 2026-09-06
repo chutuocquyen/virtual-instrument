@@ -46,7 +46,7 @@ class Reverb : public Processor {
             // Comb filters
             float b = 0;
             for (size_t i = 0; i < NUM_COMB_FILTERS; ++i) {
-                auto comb = combFilters_[i];
+                auto &comb = combFilters_[i];
                 const float delayed = comb.buffer[comb.idx];
                 comb.damped = delayed * (1 - damping_) + comb.damped * damping_;
                 comb.buffer[comb.idx++] = a + comb.damped * feedbackGains_[i];
@@ -90,6 +90,21 @@ class Reverb : public Processor {
             delayBufferIdx_ = 0;
             spectralTilt.reset();
         }
+
+		void setWet(const float a) {
+			wet_ = a;
+		}
+		void setDecay(const float a) {
+			decay_ = a;
+			updateDecay();
+		}
+		void setDamping(const float a) {
+			damping_ = a;
+		}
+		void setTone(const float a) {
+			tone_ = a;
+			spectralTilt.setGain(tone_);
+		}
 
     private:
         static constexpr int TAP_DELAY_SIZE = 6;
